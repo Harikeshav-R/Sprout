@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     GOOGLE_MAPS_API_KEY: str = ""
 
     # LLM API Keys
-    OPENAI_API_KEY: str | None = None
-    GEMINI_API_KEY: str | None = None
+    OPENROUTER_API_KEY: str | None = None
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
 
     # USDA Local Food Directories API
     # Base URL for the USDA Local Food Portal (no trailing slash).
