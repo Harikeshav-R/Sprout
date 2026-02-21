@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Mail, MapPin, Sprout, Twitter, Linkedin, Instagram } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -9,6 +10,7 @@ export default function CTA() {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -57,7 +59,7 @@ export default function CTA() {
   }, []);
 
   return (
-    <section 
+    <section
       ref={sectionRef}
       className="relative w-full py-24 bg-sprout-green grain-overlay z-50"
     >
@@ -80,7 +82,7 @@ export default function CTA() {
               Ready to Grow Your Farm's Presence?
             </h2>
             <p className="text-lg text-white/80 mb-8 leading-relaxed">
-              Claim your farm today and get your free digital health score. 
+              Claim your farm today and get your free digital health score.
               See how Sprout can help you reach more customers and grow your business.
             </p>
 
@@ -126,20 +128,26 @@ export default function CTA() {
               </div>
             </div>
 
-            <form className="space-y-4">
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                navigate('/onboarding');
+              }}
+            >
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Farm Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Enter your farm name"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-sprout-gold focus:ring-2 focus:ring-sprout-gold/20 outline-none transition-all"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   placeholder="you@example.com"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-sprout-gold focus:ring-2 focus:ring-sprout-gold/20 outline-none transition-all"
                 />
@@ -147,14 +155,14 @@ export default function CTA() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="City, State"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-sprout-gold focus:ring-2 focus:ring-sprout-gold/20 outline-none transition-all"
                 />
               </div>
 
-              <button 
+              <button
                 type="submit"
                 className="w-full group flex items-center justify-center gap-2 bg-sprout-gold hover:bg-sprout-terracotta text-white font-semibold px-6 py-4 rounded-xl transition-all duration-300 hover:shadow-lg"
               >
