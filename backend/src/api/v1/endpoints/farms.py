@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import List
 
-from src.db.session import get_session
-from src.models.farm import FarmCreate, FarmRead
 from src import crud
+from src.db.session import get_session
+from src.models.farm import Farm, FarmCreate, FarmRead
+from src.schemas.farm import FarmCreate, FarmRead
 
 router = APIRouter()
 
