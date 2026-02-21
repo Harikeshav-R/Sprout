@@ -19,9 +19,15 @@ import logging
 from typing import Any
 
 import httpx
-from pydantic import BaseModel, Field
 
 from src.core.config import settings
+from src.schemas.usda import (
+    CSAListing,
+    CSASearchResult,
+    FarmersMarketListing,
+    FarmersMarketSearchResult,
+    USDAToolError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,103 +35,11 @@ _REQUEST_TIMEOUT: float = 15.0  # seconds
 
 
 # ---------------------------------------------------------------------------
-# Pydantic response models
-# ---------------------------------------------------------------------------
-
-
-class USDABaseListing(BaseModel):
-    """Fields present on every USDA Local Food Directory listing type."""
-
-    listing_id: str | None = None
-    listing_name: str | None = None
-    listing_description: str | None = None
-    location_address: str | None = None
-    location_city: str | None = None
-    location_state: str | None = None
-    location_zipcode: str | None = None
-    # The API returns coordinates as strings ("longitude", "latitude").
-    location_x: str | None = None  # longitude
-    location_y: str | None = None  # latitude
-    contact_email: str | None = None
-    contact_phone: str | None = None
-    contact_website: str | None = None
-
-    model_config = {"extra": "ignore"}  # silently drop unknown API fields
-
-
-class FarmersMarketListing(USDABaseListing):
-    """
-    Farmers Market–specific fields from /api/farmersmarket/.
-
-    Season fields capture open/close dates and hours for up to four seasons.
-    Payment flags are "Y" / "N" strings as returned by the USDA API.
-    """
-
-    season1date: str | None = None
-    season1time: str | None = None
-    season2date: str | None = None
-    season2time: str | None = None
-    season3date: str | None = None
-    season3time: str | None = None
-    season4date: str | None = None
-    season4time: str | None = None
-    # Payment / benefit program acceptance
-    credit: str | None = None   # credit / debit cards
-    wic: str | None = None      # WIC programme vouchers
-    wiccash: str | None = None  # WIC FMNP cash
-    snap: str | None = None     # SNAP / EBT
-
-
-class CSAListing(USDABaseListing):
-    """CSA-specific fields from /api/csa/."""
-
-    brief_desc: str | None = None
-    delivery_option: str | None = None
-    on_farm_pickup: str | None = None
-    payment_option: str | None = None
-    distribution_type: str | None = None
-
-
-class FarmersMarketSearchResult(BaseModel):
-    """Structured result returned to the agent after a farmers-market search."""
-
-    source: str = "farmersmarket"
-    query_zip: str | None = None
-    query_state: str | None = None
-    query_radius_miles: int | None = None
-    count: int = 0
-    listings: list[FarmersMarketListing] = Field(default_factory=list)
-
-
-class CSASearchResult(BaseModel):
-    """Structured result returned to the agent after a CSA search."""
-
-    source: str = "csa"
-    query_zip: str | None = None
-    query_state: str | None = None
-    query_radius_miles: int | None = None
-    count: int = 0
-    listings: list[CSAListing] = Field(default_factory=list)
-
-
-class USDAToolError(BaseModel):
-    """
-    Returned instead of raising an exception when the upstream USDA API is
-    unavailable or returns an error.  The LangGraph agent can inspect this
-    and decide how to recover without the graph crashing.
-    """
-
-    source: str
-    error: str
-    detail: str | None = None
-
-
-# ---------------------------------------------------------------------------
 # Internal HTTP helper
 # ---------------------------------------------------------------------------
 
 
-async def _fetch_usda(endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
+async def _fetch_usda(client: httpx.AsyncClient, endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
     """
     GET a USDA Local Food Directories endpoint and return the parsed JSON.
 
@@ -141,11 +55,10 @@ async def _fetch_usda(endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
     if settings.USDA_API_KEY:
         params = {**params, "apikey": settings.USDA_API_KEY}
 
-    async with httpx.AsyncClient(timeout=_REQUEST_TIMEOUT) as client:
-        logger.debug("USDA GET %s | params=%s", url, params)
-        response = await client.get(url, params=params)
-        response.raise_for_status()
-        return response.json()
+    logger.debug("USDA GET %s | params=%s", url, params)
+    response = await client.get(url, params=params)
+    response.raise_for_status()
+    return response.json()
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +70,7 @@ async def search_farmers_markets(
     zip_code: str | None = None,
     state: str | None = None,
     radius_miles: int = 25,
+    client: httpx.AsyncClient | None = None,
 ) -> FarmersMarketSearchResult | USDAToolError:
     """
     Search the USDA Farmers Market directory by ZIP code and/or state.
@@ -190,43 +104,78 @@ async def search_farmers_markets(
     if state:
         params["state"] = state.upper()
 
-    try:
-        data = await _fetch_usda("/api/farmersmarket/", params)
-    except httpx.HTTPStatusError as exc:
-        logger.error(
-            "USDA farmers-market HTTP error %s for params %s",
-            exc.response.status_code,
-            params,
-        )
-        return USDAToolError(
-            source="farmersmarket",
-            error=f"HTTP {exc.response.status_code} from USDA API",
-            detail=str(exc),
-        )
-    except httpx.TimeoutException as exc:
-        logger.error("USDA farmers-market request timed out: %s", exc)
-        return USDAToolError(
-            source="farmersmarket",
-            error="Request to USDA API timed out",
-            detail=str(exc),
-        )
-    except httpx.RequestError as exc:
-        logger.error("USDA farmers-market network error: %s", exc)
-        return USDAToolError(
-            source="farmersmarket",
-            error="Network error reaching USDA API",
-            detail=str(exc),
-        )
-    except Exception as exc:  # noqa: BLE001 – catch-all so agent graph never crashes
-        logger.exception("Unexpected error in search_farmers_markets")
-        return USDAToolError(
-            source="farmersmarket",
-            error="Unexpected error",
-            detail=str(exc),
+    async def _execute_search(client_to_use: httpx.AsyncClient) -> FarmersMarketSearchResult | USDAToolError:
+        try:
+            data = await _fetch_usda(client_to_use, "/api/farmersmarket/", params)
+        except httpx.HTTPStatusError as exc:
+            logger.error(
+                "USDA farmers-market HTTP error %s for params %s",
+                exc.response.status_code,
+                params,
+            )
+            return USDAToolError(
+                source="farmersmarket",
+                error=f"HTTP {exc.response.status_code} from USDA API",
+                detail=str(exc),
+            )
+        except httpx.TimeoutException as exc:
+            logger.error("USDA farmers-market request timed out: %s", exc)
+            return USDAToolError(
+                source="farmersmarket",
+                error="Request to USDA API timed out",
+                detail=str(exc),
+            )
+        except httpx.RequestError as exc:
+            logger.error("USDA farmers-market network error: %s", exc)
+            return USDAToolError(
+                source="farmersmarket",
+                error="Network error reaching USDA API",
+                detail=str(exc),
+            )
+        except Exception as exc:  # noqa: BLE001 – catch-all so agent graph never crashes
+            logger.exception("Unexpected error in search_farmers_markets")
+            return USDAToolError(
+                source="farmersmarket",
+                error="Unexpected error",
+                detail=str(exc),
+            )
+
+        try:
+            raw_listings: list[dict[str, Any]] = data.get("results", [])
+            if not isinstance(raw_listings, list):
+                if isinstance(data, dict) and "error" in data:
+                    raise ValueError(f"API Error: {data['error']}")
+                raise TypeError(f"Expected 'results' to be a list, got {type(raw_listings)}")
+            listings = [FarmersMarketListing.model_validate(r) for r in raw_listings]
+        except Exception as exc:
+            logger.error("Failed to parse USDA farmers-market response: %s", exc)
+            return USDAToolError(
+                source="farmersmarket",
+                error="Failed to parse response payload",
+                detail=str(exc),
+            )
+
+        logger.info(
+            "USDA farmers-market: %d results for zip=%s state=%s radius=%s mi",
+            len(listings),
+            zip_code,
+            state,
+            radius_miles if zip_code else "N/A",
         )
 
-    raw_listings: list[dict[str, Any]] = data.get("results", [])
-    listings = [FarmersMarketListing.model_validate(r) for r in raw_listings]
+        return FarmersMarketSearchResult(
+            query_zip=zip_code,
+            query_state=state,
+            query_radius_miles=radius_miles if zip_code else None,
+            count=data.get("count", len(listings)),
+            listings=listings,
+        )
+
+    if client is None:
+        async with httpx.AsyncClient(timeout=_REQUEST_TIMEOUT) as local_client:
+            return await _execute_search(local_client)
+    else:
+        return await _execute_search(client)
 
     logger.info(
         "USDA farmers-market: %d results for zip=%s state=%s radius=%s mi",
@@ -249,6 +198,7 @@ async def search_csa(
     zip_code: str | None = None,
     state: str | None = None,
     radius_miles: int = 25,
+    client: httpx.AsyncClient | None = None,
 ) -> CSASearchResult | USDAToolError:
     """
     Search the USDA Community Supported Agriculture (CSA) directory.
@@ -279,43 +229,78 @@ async def search_csa(
     if state:
         params["state"] = state.upper()
 
-    try:
-        data = await _fetch_usda("/api/csa/", params)
-    except httpx.HTTPStatusError as exc:
-        logger.error(
-            "USDA CSA HTTP error %s for params %s",
-            exc.response.status_code,
-            params,
-        )
-        return USDAToolError(
-            source="csa",
-            error=f"HTTP {exc.response.status_code} from USDA API",
-            detail=str(exc),
-        )
-    except httpx.TimeoutException as exc:
-        logger.error("USDA CSA request timed out: %s", exc)
-        return USDAToolError(
-            source="csa",
-            error="Request to USDA API timed out",
-            detail=str(exc),
-        )
-    except httpx.RequestError as exc:
-        logger.error("USDA CSA network error: %s", exc)
-        return USDAToolError(
-            source="csa",
-            error="Network error reaching USDA API",
-            detail=str(exc),
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Unexpected error in search_csa")
-        return USDAToolError(
-            source="csa",
-            error="Unexpected error",
-            detail=str(exc),
+    async def _execute_search(client_to_use: httpx.AsyncClient) -> CSASearchResult | USDAToolError:
+        try:
+            data = await _fetch_usda(client_to_use, "/api/csa/", params)
+        except httpx.HTTPStatusError as exc:
+            logger.error(
+                "USDA CSA HTTP error %s for params %s",
+                exc.response.status_code,
+                params,
+            )
+            return USDAToolError(
+                source="csa",
+                error=f"HTTP {exc.response.status_code} from USDA API",
+                detail=str(exc),
+            )
+        except httpx.TimeoutException as exc:
+            logger.error("USDA CSA request timed out: %s", exc)
+            return USDAToolError(
+                source="csa",
+                error="Request to USDA API timed out",
+                detail=str(exc),
+            )
+        except httpx.RequestError as exc:
+            logger.error("USDA CSA network error: %s", exc)
+            return USDAToolError(
+                source="csa",
+                error="Network error reaching USDA API",
+                detail=str(exc),
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Unexpected error in search_csa")
+            return USDAToolError(
+                source="csa",
+                error="Unexpected error",
+                detail=str(exc),
+            )
+
+        try:
+            raw_listings: list[dict[str, Any]] = data.get("results", [])
+            if not isinstance(raw_listings, list):
+                if isinstance(data, dict) and "error" in data:
+                    raise ValueError(f"API Error: {data['error']}")
+                raise TypeError(f"Expected 'results' to be a list, got {type(raw_listings)}")
+            listings = [CSAListing.model_validate(r) for r in raw_listings]
+        except Exception as exc:
+            logger.error("Failed to parse USDA CSA response: %s", exc)
+            return USDAToolError(
+                source="csa",
+                error="Failed to parse response payload",
+                detail=str(exc),
+            )
+
+        logger.info(
+            "USDA CSA: %d results for zip=%s state=%s radius=%s mi",
+            len(listings),
+            zip_code,
+            state,
+            radius_miles if zip_code else "N/A",
         )
 
-    raw_listings: list[dict[str, Any]] = data.get("results", [])
-    listings = [CSAListing.model_validate(r) for r in raw_listings]
+        return CSASearchResult(
+            query_zip=zip_code,
+            query_state=state,
+            query_radius_miles=radius_miles if zip_code else None,
+            count=data.get("count", len(listings)),
+            listings=listings,
+        )
+
+    if client is None:
+        async with httpx.AsyncClient(timeout=_REQUEST_TIMEOUT) as local_client:
+            return await _execute_search(local_client)
+    else:
+        return await _execute_search(client)
 
     logger.info(
         "USDA CSA: %d results for zip=%s state=%s radius=%s mi",
@@ -360,14 +345,15 @@ async def search_all_local_food(
     Neither coroutine can raise — any failure is captured as a USDAToolError
     value so the graph continues safely with whatever data is available.
     """
-    fm_result, csa_result = await asyncio.gather(
-        search_farmers_markets(
-            zip_code=zip_code, state=state, radius_miles=radius_miles
-        ),
-        search_csa(
-            zip_code=zip_code, state=state, radius_miles=radius_miles
-        ),
-    )
+    async with httpx.AsyncClient(timeout=_REQUEST_TIMEOUT) as client:
+        fm_result, csa_result = await asyncio.gather(
+            search_farmers_markets(
+                zip_code=zip_code, state=state, radius_miles=radius_miles, client=client
+            ),
+            search_csa(
+                zip_code=zip_code, state=state, radius_miles=radius_miles, client=client
+            ),
+        )
 
     return {
         "farmersmarket": fm_result,

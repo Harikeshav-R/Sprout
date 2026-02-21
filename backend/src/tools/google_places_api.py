@@ -20,12 +20,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
 
 import httpx
-from pydantic import BaseModel, Field
 
 from src.core.config import settings
+from src.schemas.google_places import NearbyBusiness, PlacesSearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -56,34 +55,6 @@ _FIELD_MASK = ",".join([
     "places.types",
     "places.location",
 ])
-
-
-# ---------------------------------------------------------------------------
-# Output Pydantic models  (consumed by LangGraph state + Phase-1 web_scraper)
-# ---------------------------------------------------------------------------
-
-class NearbyBusiness(BaseModel):
-    """A single business returned by the Places search."""
-
-    name: str
-    address: str
-    rating: Optional[float] = None
-    website: Optional[str] = None
-    phone_number: Optional[str] = None
-    place_id: str
-    latitude: float
-    longitude: float
-    types: list[str] = Field(default_factory=list)
-
-
-class PlacesSearchResult(BaseModel):
-    """Aggregate result returned by search_nearby_businesses."""
-
-    query: str
-    location_input: str
-    radius_meters: int
-    businesses: list[NearbyBusiness]
-    total_found: int
 
 
 # ---------------------------------------------------------------------------
@@ -170,9 +141,23 @@ async def _resolve_location(
     return await _geocode_address(client, location)
 
 
-def _parse_place(raw: dict) -> NearbyBusiness:
-    """Maps a raw Google Places v1 place object to a NearbyBusiness."""
-    loc = raw.get("location", {})
+def _parse_place(raw: dict) -> NearbyBusiness | None:
+    """Maps a raw Google Places v1 place object to a NearbyBusiness.
+    Returns None if the location coordinates are missing or 0.0,0.0.
+    """
+    loc = raw.get("location")
+    if not loc or ("latitude" not in loc and "longitude" not in loc):
+        logger.debug("Skipping place '%s' due to missing location data", raw.get("id"))
+        return None
+        
+    lat = float(loc.get("latitude", 0.0))
+    lng = float(loc.get("longitude", 0.0))
+    
+    # Skip clearly invalid coordinates (e.g. defaulting to 0,0)
+    if lat == 0.0 and lng == 0.0:
+        logger.debug("Skipping place '%s' due to (0,0) coordinates", raw.get("id"))
+        return None
+
     display = raw.get("displayName", {})
 
     return NearbyBusiness(
@@ -182,8 +167,8 @@ def _parse_place(raw: dict) -> NearbyBusiness:
         website=raw.get("websiteUri"),
         phone_number=raw.get("internationalPhoneNumber"),
         place_id=raw.get("id", ""),
-        latitude=float(loc.get("latitude", 0.0)),
-        longitude=float(loc.get("longitude", 0.0)),
+        latitude=lat,
+        longitude=lng,
         types=raw.get("types", []),
     )
 
@@ -225,7 +210,8 @@ async def _run_text_search(
     )
 
     places: list[dict] = response.json().get("places", [])
-    return [_parse_place(p) for p in places]
+    parsed_places = [_parse_place(p) for p in places]
+    return [p for p in parsed_places if p is not None]
 
 
 # ---------------------------------------------------------------------------
@@ -258,10 +244,13 @@ async def search_nearby_businesses(
         coordinates ready for Phase-1 scraping or Phase-3 email drafting.
 
     Raises:
-        ValueError:   If the address cannot be geocoded.
+        ValueError:   If the API key is missing or the address cannot be geocoded.
         RuntimeError: If all retry attempts are exhausted.
         httpx.HTTPStatusError: On unrecoverable API errors (e.g. 403 bad key).
     """
+    if not settings.GOOGLE_MAPS_API_KEY:
+        raise ValueError("GOOGLE_MAPS_API_KEY is not configured in environment settings.")
+
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         lat, lng = await _resolve_location(client, location)
 
