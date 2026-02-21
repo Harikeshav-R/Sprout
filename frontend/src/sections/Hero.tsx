@@ -38,7 +38,7 @@ export default function Hero() {
 
       {/* Content - pointer-events-none so sound button beneath can receive clicks */}
       <div className="relative z-10 flex flex-col items-center text-center max-w-4xl px-6 w-full pointer-events-none">
-        <h1 className="hero-animate font-display font-medium text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.05] tracking-tight text-[#1a1a1a] mb-6">
+        <h1 className="hero-animate font-display font-medium text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.05] tracking-tight text-[#1a1a1a] mb-6 whitespace-nowrap">
           <Typewriter
             text="Your farm deserves to be found"
             speed={80}
