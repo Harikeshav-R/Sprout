@@ -12,6 +12,9 @@ class Settings(BaseSettings):
 
     # Google Maps / Places API
     GOOGLE_MAPS_API_KEY: str = ""
+    GOOGLE_MAPS_GEOCODING_URL: str = "https://maps.googleapis.com/maps/api/geocode/json"
+    GOOGLE_PLACES_TEXT_SEARCH_URL: str = "https://places.googleapis.com/v1/places:searchText"
+    GOOGLE_PLACES_DETAILS_BASE_URL: str = "https://places.googleapis.com/v1/places"
 
     # LLM API Keys
     OPENROUTER_API_KEY: str | None = None
@@ -25,7 +28,11 @@ class Settings(BaseSettings):
 
     # Third-party Enrichment APIs (Phase 2 SDR)
     HUNTER_API_KEY: str | None = None
+    HUNTER_API_BASE_URL: str = "https://api.hunter.io/v2"
+    
     SERP_API_KEY: str | None = None  # For LinkedIn/Google Search/Events
+    SERPAPI_BASE_URL: str = "https://serpapi.com"
+    SERPER_BASE_URL: str = "https://google.serper.dev"
 
     # Phase 3: Market Intelligence & Weather
     USDA_MARKET_NEWS_API_KEY: str | None = None

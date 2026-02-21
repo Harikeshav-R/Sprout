@@ -32,8 +32,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # API endpoints
 # ---------------------------------------------------------------------------
-_GEOCODING_URL = "https://maps.googleapis.com/maps/api/geocode/json"
-_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
+# Defined in config.py:
+# settings.GOOGLE_MAPS_GEOCODING_URL
+# settings.GOOGLE_PLACES_TEXT_SEARCH_URL
 
 # ---------------------------------------------------------------------------
 # Tunables
@@ -112,7 +113,7 @@ async def _geocode_address(
     response = await _request_with_retry(
         client,
         "GET",
-        _GEOCODING_URL,
+        settings.GOOGLE_MAPS_GEOCODING_URL,
         params={"address": address, "key": settings.GOOGLE_MAPS_API_KEY},
         timeout=REQUEST_TIMEOUT,
     )
@@ -204,7 +205,7 @@ async def _run_text_search(
     response = await _request_with_retry(
         client,
         "POST",
-        _TEXT_SEARCH_URL,
+        settings.GOOGLE_PLACES_TEXT_SEARCH_URL,
         json=payload,
         headers=headers,
         timeout=REQUEST_TIMEOUT,

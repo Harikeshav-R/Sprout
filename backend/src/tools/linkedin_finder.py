@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # API endpoints
 # ---------------------------------------------------------------------------
 # Defaulting to Serper.dev as it's the standard for LangChain SERP tools
-_SERPER_URL = "https://google.serper.dev/search"
+# Constructed dynamically using settings.SERPER_BASE_URL
 
 
 # ---------------------------------------------------------------------------
@@ -74,9 +74,11 @@ async def search_linkedin_profiles(name: str, company: Optional[str] = None) -> 
         "Content-Type": "application/json"
     }
 
+    url = f"{settings.SERPER_BASE_URL}/search"
+
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(_SERPER_URL, headers=headers, json=payload)
+            response = await client.post(url, headers=headers, json=payload)
 
             if response.status_code == 403:
                 return LinkedInSearchResult(

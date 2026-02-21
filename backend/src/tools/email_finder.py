@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # API endpoints
 # ---------------------------------------------------------------------------
-_HUNTER_DOMAIN_SEARCH_URL = "https://api.hunter.io/v2/domain-search"
+# Constructed dynamically inside the function using settings
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +58,8 @@ async def find_decision_maker_email(domain: str) -> EmailSearchResult:
     # Clean the domain input
     clean_domain = domain.replace("http://", "").replace("https://", "").replace("www.", "").split("/")[0]
 
+    url = f"{settings.HUNTER_API_BASE_URL}/domain-search"
+
     params = {
         "domain": clean_domain,
         "api_key": settings.HUNTER_API_KEY,
@@ -67,7 +69,7 @@ async def find_decision_maker_email(domain: str) -> EmailSearchResult:
 
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(_HUNTER_DOMAIN_SEARCH_URL, params=params)
+            response = await client.get(url, params=params)
 
             # Handle specific API errors
             if response.status_code == 401:

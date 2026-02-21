@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 async def _fetch_serp_events(client: httpx.AsyncClient, query: str, location: str) -> dict[str, Any]:
     # Using SerpApi Google Events API or similar
-    base_url = "https://serpapi.com/search"
+    base_url = f"{settings.SERPAPI_BASE_URL}/search"
 
     params = {
         "engine": "google_events",

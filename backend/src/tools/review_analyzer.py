@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # API endpoints
 # ---------------------------------------------------------------------------
-_PLACE_DETAILS_URL_TEMPLATE = "https://places.googleapis.com/v1/places/{place_id}"
+# Constructed dynamically using settings.GOOGLE_PLACES_DETAILS_BASE_URL
 
 # Fields to retrieve from Google Places Details
 _FIELD_MASK = "reviews"
@@ -59,7 +59,7 @@ async def analyze_restaurant_reviews(place_id: str) -> ReviewAnalysisResult:
             error="GOOGLE_MAPS_API_KEY is not configured."
         )
 
-    url = _PLACE_DETAILS_URL_TEMPLATE.format(place_id=place_id)
+    url = f"{settings.GOOGLE_PLACES_DETAILS_BASE_URL}/{place_id}"
 
     headers = {
         "Content-Type": "application/json",
