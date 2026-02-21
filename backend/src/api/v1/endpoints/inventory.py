@@ -2,9 +2,10 @@ import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from src.db.session import get_session
-from src.models.inventory import FarmInventoryCreate, FarmInventoryRead
+from src.models.inventory import FarmInventoryCreate, FarmInventoryRead, FarmInventoryUpdate
 from src import crud
 
 router = APIRouter()
@@ -13,7 +14,14 @@ router = APIRouter()
 async def create_inventory(
     *, session: AsyncSession = Depends(get_session), inventory_in: FarmInventoryCreate
 ):
-    return await crud.create_inventory(session, inventory_in)
+    farm = await crud.get_farm(session, inventory_in.farm_id)
+    if not farm:
+        raise HTTPException(status_code=400, detail="Farm not found")
+    try:
+        return await crud.create_inventory(session, inventory_in)
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status_code=400, detail="Inventory item for this farm and crop already exists")
 
 @router.get("/", response_model=List[FarmInventoryRead])
 async def read_inventories(
@@ -38,12 +46,16 @@ async def update_inventory(
     *,
     session: AsyncSession = Depends(get_session),
     id: uuid.UUID,
-    inventory_in: FarmInventoryCreate,
+    inventory_in: FarmInventoryUpdate,
 ):
     inventory = await crud.get_inventory(session, id)
     if not inventory:
         raise HTTPException(status_code=404, detail="Inventory not found")
-    return await crud.update_inventory(session, inventory=inventory, inventory_in=inventory_in)
+    try:
+        return await crud.update_inventory(session, inventory=inventory, inventory_in=inventory_in)
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status_code=400, detail="Database integrity error")
 
 @router.delete("/{id}")
 async def delete_inventory(

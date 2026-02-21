@@ -19,6 +19,10 @@ class FarmInventory(FarmInventoryBase, table=True):
 class FarmInventoryCreate(FarmInventoryBase):
     pass
 
+class FarmInventoryUpdate(SQLModel):
+    quantity: Optional[float] = Field(default=None, ge=0)
+    unit: Optional[str] = Field(default=None, min_length=1)
+
 class FarmInventoryRead(FarmInventoryBase):
     id: uuid.UUID
     last_updated: datetime

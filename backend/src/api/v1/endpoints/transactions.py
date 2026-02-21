@@ -13,6 +13,9 @@ router = APIRouter()
 async def create_transaction(
     *, session: AsyncSession = Depends(get_session), transaction_in: TransactionCreate
 ):
+    farm = await crud.get_farm(session, transaction_in.farm_id)
+    if not farm:
+        raise HTTPException(status_code=400, detail="Farm not found")
     return await crud.create_transaction(session, transaction_in)
 
 @router.get("/", response_model=List[TransactionRead])

@@ -15,7 +15,7 @@ async def get_farm(session: AsyncSession, id: uuid.UUID) -> Optional[Farm]:
     return await session.get(Farm, id)
 
 async def get_farms(
-    session: AsyncSession, offset: int = 0, limit: int = 100
+    session: AsyncSession, *, offset: int = 0, limit: int = 100
 ) -> List[Farm]:
     result = await session.exec(select(Farm).offset(offset).limit(limit))
     return result.all()

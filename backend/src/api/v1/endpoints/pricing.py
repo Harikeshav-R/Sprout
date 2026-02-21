@@ -2,6 +2,7 @@ import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from src.db.session import get_session
 from src.models.pricing import CommodityPricingCreate, CommodityPricingRead
@@ -13,7 +14,11 @@ router = APIRouter()
 async def create_pricing(
     *, session: AsyncSession = Depends(get_session), pricing_in: CommodityPricingCreate
 ):
-    return await crud.create_pricing(session, pricing_in)
+    try:
+        return await crud.create_pricing(session, pricing_in)
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status_code=400, detail="Pricing record for this crop, county, and date already exists")
 
 @router.get("/", response_model=List[CommodityPricingRead])
 async def read_pricings(

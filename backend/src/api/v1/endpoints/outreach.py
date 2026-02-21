@@ -17,6 +17,9 @@ class OutreachStatusUpdate(BaseModel):
 async def create_outreach_email(
     *, session: AsyncSession = Depends(get_session), outreach_in: OutreachEmailCreate
 ):
+    farm = await crud.get_farm(session, outreach_in.farm_id)
+    if not farm:
+        raise HTTPException(status_code=400, detail="Farm not found")
     return await crud.create_outreach_email(session, outreach_in)
 
 @router.get("/", response_model=List[OutreachEmailRead])
@@ -48,4 +51,7 @@ async def update_outreach_status(
     outreach = await crud.get_outreach_email(session, id)
     if not outreach:
         raise HTTPException(status_code=404, detail="Outreach email not found")
+        
+    # Documented transition logic: All transitions are intentionally allowed for manual corrections
+    # to support the "Approve & Send" and manual tracking workflow by the farmer.
     return await crud.update_outreach_status(session, outreach=outreach, status=status_update.status)
