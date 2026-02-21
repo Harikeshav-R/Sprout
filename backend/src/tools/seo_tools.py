@@ -1,8 +1,11 @@
 import json
+
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
+
 from src.core.config import settings
-from langchain_core.messages import HumanMessage
+
 
 @tool
 async def fetch_local_seo_keywords(zip_code: str, farm_type: str) -> str:
@@ -20,15 +23,15 @@ async def fetch_local_seo_keywords(zip_code: str, farm_type: str) -> str:
         str: A JSON string containing suggested keywords and search volumes.
     """
     if not settings.OPENROUTER_API_KEY:
-         return json.dumps({"error": "No OPENROUTER_API_KEY available for SEO generation.", "status": "error"})
-         
+        return json.dumps({"error": "No OPENROUTER_API_KEY available for SEO generation.", "status": "error"})
+
     llm = ChatOpenAI(
         model="google/gemini-2.5-flash",
         temperature=0.4,
         openai_api_key=settings.OPENROUTER_API_KEY,
         base_url=settings.OPENROUTER_BASE_URL
     )
-    
+
     prompt = f"""
     You are an expert SEO data platform. Provide a list of the top 5 highly localized 
     search queries that people in or near zip code "{zip_code}" would use to find a "{farm_type}".
@@ -46,26 +49,26 @@ async def fetch_local_seo_keywords(zip_code: str, farm_type: str) -> str:
       ]
     }}
     """
-    
+
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
         text = str(response.content).strip()
-        
+
         # Clean markdown if generated
         if text.startswith("```json"):
-             text = text[7:]
-             if text.endswith("```"):
-                  text = text[:-3]
-                  
+            text = text[7:]
+            if text.endswith("```"):
+                text = text[:-3]
+
         data = json.loads(text.strip())
-        
+
         return json.dumps({
             "seo_data": data,
             "status": "success"
         }, indent=2)
 
     except Exception as e:
-         return json.dumps({
+        return json.dumps({
             "error": "Failed to generate local SEO keywords.",
             "details": str(e),
             "status": "error"

@@ -1,10 +1,13 @@
 from typing import List, Optional
+
 from pydantic import BaseModel
+
 
 class WeatherError(BaseModel):
     source: str = "weather_api"
     error: str
     detail: Optional[str] = None
+
 
 class WeatherForecast(BaseModel):
     temperature_min: float
@@ -13,6 +16,7 @@ class WeatherForecast(BaseModel):
     humidity: int
     description: str
     date: str
+
 
 class WeatherResult(BaseModel):
     current_temp: float

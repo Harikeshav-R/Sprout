@@ -1,4 +1,5 @@
 import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,7 +25,13 @@ class Settings(BaseSettings):
 
     # Third-party Enrichment APIs (Phase 2 SDR)
     HUNTER_API_KEY: str | None = None
-    SERP_API_KEY: str | None = None  # For LinkedIn/Google Search
+    SERP_API_KEY: str | None = None  # For LinkedIn/Google Search/Events
+
+    # Phase 3: Market Intelligence & Weather
+    USDA_MARKET_NEWS_API_KEY: str | None = None
+    USDA_MARKET_NEWS_BASE_URL: str = "https://marsapi.ams.usda.gov/services/v1.2"
+    WEATHER_API_KEY: str | None = None  # OpenWeatherMap or similar
+    WEATHER_API_BASE_URL: str = "https://api.openweathermap.org/data/2.5"
 
     _env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
     if not os.path.exists(_env_file):

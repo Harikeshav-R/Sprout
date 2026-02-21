@@ -15,7 +15,6 @@ Architecture rules enforced
 """
 
 import logging
-from typing import List, Optional
 
 import httpx
 from langchain_core.tools import tool
@@ -29,6 +28,7 @@ logger = logging.getLogger(__name__)
 # API endpoints
 # ---------------------------------------------------------------------------
 _HUNTER_DOMAIN_SEARCH_URL = "https://api.hunter.io/v2/domain-search"
+
 
 # ---------------------------------------------------------------------------
 # Public tool function
@@ -68,18 +68,18 @@ async def find_decision_maker_email(domain: str) -> EmailSearchResult:
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(_HUNTER_DOMAIN_SEARCH_URL, params=params)
-            
+
             # Handle specific API errors
             if response.status_code == 401:
                 return EmailSearchResult(domain=clean_domain, error="Invalid Hunter.io API key.")
             if response.status_code == 429:
                 return EmailSearchResult(domain=clean_domain, error="Hunter.io rate limit exceeded.")
-            
+
             # Parse successful response
             if response.status_code == 200:
                 data = response.json().get("data", {})
                 emails = data.get("emails", [])
-                
+
                 contacts = []
                 for e in emails:
                     contacts.append(EmailContact(
@@ -92,11 +92,11 @@ async def find_decision_maker_email(domain: str) -> EmailSearchResult:
                         linkedin=e.get("linkedin"),
                         twitter=e.get("twitter")
                     ))
-                
+
                 # Filter for relevant roles if possible (simple keyword matching)
                 # In a real app, we might want to keep all and let the LLM filter.
                 # For now, we return all found contacts.
-                
+
                 return EmailSearchResult(
                     domain=clean_domain,
                     organization=data.get("organization"),
@@ -106,7 +106,7 @@ async def find_decision_maker_email(domain: str) -> EmailSearchResult:
 
             # Generic error handling
             return EmailSearchResult(
-                domain=clean_domain, 
+                domain=clean_domain,
                 error=f"Hunter.io API returned status {response.status_code}"
             )
 

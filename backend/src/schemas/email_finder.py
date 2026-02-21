@@ -1,5 +1,7 @@
 from typing import List, Optional
+
 from pydantic import BaseModel
+
 
 class EmailContact(BaseModel):
     """Represents a single email contact found for a domain."""

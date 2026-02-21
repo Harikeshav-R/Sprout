@@ -15,7 +15,6 @@ Architecture rules enforced
 """
 
 import logging
-from typing import List, Optional
 
 import httpx
 from langchain_core.tools import tool
@@ -32,6 +31,7 @@ _PLACE_DETAILS_URL_TEMPLATE = "https://places.googleapis.com/v1/places/{place_id
 
 # Fields to retrieve from Google Places Details
 _FIELD_MASK = "reviews"
+
 
 # ---------------------------------------------------------------------------
 # Public tool function
@@ -60,7 +60,7 @@ async def analyze_restaurant_reviews(place_id: str) -> ReviewAnalysisResult:
         )
 
     url = _PLACE_DETAILS_URL_TEMPLATE.format(place_id=place_id)
-    
+
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": settings.GOOGLE_MAPS_API_KEY,
@@ -73,7 +73,7 @@ async def analyze_restaurant_reviews(place_id: str) -> ReviewAnalysisResult:
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(url, headers=headers)
-            
+
             if response.status_code != 200:
                 return ReviewAnalysisResult(
                     place_id=place_id,
@@ -85,7 +85,7 @@ async def analyze_restaurant_reviews(place_id: str) -> ReviewAnalysisResult:
 
             data = response.json()
             raw_reviews = data.get("reviews", [])
-            
+
             processed_reviews = []
             relevant_count = 0
 

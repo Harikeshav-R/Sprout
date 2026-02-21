@@ -1,6 +1,8 @@
 import json
+
 from langchain_core.tools import tool
 from playwright.async_api import async_playwright
+
 
 @tool
 async def scrape_social_media(url: str) -> str:
@@ -20,14 +22,14 @@ async def scrape_social_media(url: str) -> str:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
-            
+
             # Navigate to the social media profile
             await page.goto(url, wait_until="domcontentloaded", timeout=15000)
-            
+
             # Extract basic text content
             text = await page.evaluate("document.body.innerText")
             await browser.close()
-            
+
             if not text or len(text.strip()) < 10:
                 # Fallback if blocked
                 return json.dumps({

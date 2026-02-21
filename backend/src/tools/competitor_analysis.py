@@ -1,11 +1,13 @@
 import json
-from bs4 import BeautifulSoup
+
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage
+
 from src.core.config import settings
 from src.tools.google_places_api import search_nearby_businesses
 from src.tools.web_scraper import scrape_website_content
+
 
 @tool
 async def analyze_competitor_gap(latitude: float, longitude: float, farm_name: str, farm_offerings: str) -> str:
@@ -24,30 +26,30 @@ async def analyze_competitor_gap(latitude: float, longitude: float, farm_name: s
     """
     if not settings.OPENROUTER_API_KEY:
         return json.dumps({"error": "No OPENROUTER_API_KEY available for analysis.", "status": "error"})
-        
+
     try:
         # 1. Broadly search for similar local businesses (competitors)
         nearby_raw = await search_nearby_businesses.ainvoke({
-            "latitude": latitude, 
-            "longitude": longitude, 
-            "keyword": "farm fresh produce CSA", 
-            "radius_meters": 25000 # ~15 miles
+            "latitude": latitude,
+            "longitude": longitude,
+            "keyword": "farm fresh produce CSA",
+            "radius_meters": 25000  # ~15 miles
         })
-        
+
         try:
-             competitors = json.loads(nearby_raw)
+            competitors = json.loads(nearby_raw)
         except json.JSONDecodeError:
-             return json.dumps({"error": "Failed to parse Google Places response.", "status": "error"})
-             
+            return json.dumps({"error": "Failed to parse Google Places response.", "status": "error"})
+
         if not competitors or not isinstance(competitors, list):
-             return json.dumps({"status": "success", "message": "No direct local competitors found within 15 miles."})
-             
+            return json.dumps({"status": "success", "message": "No direct local competitors found within 15 miles."})
+
         # Filter out self
         targets = [c for c in competitors if farm_name.lower() not in c.get('name', '').lower()][:3]
-        
+
         if not targets:
-             return json.dumps({"status": "success", "message": "No other local competitors found."})
-             
+            return json.dumps({"status": "success", "message": "No other local competitors found."})
+
         # 2. Gather info on those competitors
         competitor_profiles = []
         for c in targets:
@@ -58,7 +60,7 @@ async def analyze_competitor_gap(latitude: float, longitude: float, farm_name: s
                 "num_reviews": c.get("user_ratings_total"),
                 "website": c.get("website")
             }
-            
+
             # Scrape content if they have a website
             if profile["website"] and "http" in profile["website"]:
                 scraped_raw = await scrape_website_content.ainvoke({"url": profile["website"]})
@@ -78,7 +80,7 @@ async def analyze_competitor_gap(latitude: float, longitude: float, farm_name: s
             openai_api_key=settings.OPENROUTER_API_KEY,
             base_url=settings.OPENROUTER_BASE_URL
         )
-        
+
         prompt = f"""
         You are a farm marketing strategist. You are advising "{farm_name}", which sells: "{farm_offerings}".
         
@@ -93,25 +95,25 @@ async def analyze_competitor_gap(latitude: float, longitude: float, farm_name: s
         "market_gaps": array of strings (e.g., "Competitor X lacks mobile website")
         "positioning_recommendations": array of strings
         """
-        
+
         response = await llm.ainvoke([HumanMessage(content=prompt)])
-        
+
         # Clean markdown if generated
         text = str(response.content).strip()
         if text.startswith("```json"):
-             text = text[7:]
-             if text.endswith("```"):
-                  text = text[:-3]
-                  
+            text = text[7:]
+            if text.endswith("```"):
+                text = text[:-3]
+
         report = json.loads(text.strip())
-        
+
         return json.dumps({
             "target_farm": farm_name,
             "competitors_analyzed": len(competitor_profiles),
             "report": report,
             "status": "success"
         }, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "error": "Failed to analyze competitor gap.",

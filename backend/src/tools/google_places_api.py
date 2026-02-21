@@ -240,7 +240,7 @@ async def search_nearby_businesses(
                        Default = 48 280 m ≈ 30 miles (Phase-3 spec).
         max_results:   Maximum results to return (Google cap: 20 per page).
 
-    Returns:
+    Returns:l
         PlacesSearchResult – a Pydantic model containing a list of
         NearbyBusiness objects with name, address, rating, website, and
         coordinates ready for Phase-1 scraping or Phase-3 email drafting.

@@ -19,9 +19,9 @@ import logging
 from typing import Any
 
 import httpx
+from langchain_core.tools import tool
 
 from src.core.config import settings
-from langchain_core.tools import tool
 from src.schemas.usda import (
     CSAListing,
     CSASearchResult,
@@ -69,10 +69,10 @@ async def _fetch_usda(client: httpx.AsyncClient, endpoint: str, params: dict[str
 
 @tool
 async def search_farmers_markets(
-    zip_code: str | None = None,
-    state: str | None = None,
-    radius_miles: int = 25,
-    client: httpx.AsyncClient | None = None,
+        zip_code: str | None = None,
+        state: str | None = None,
+        radius_miles: int = 25,
+        client: httpx.AsyncClient | None = None,
 ) -> FarmersMarketSearchResult | USDAToolError:
     """
     Search the USDA Farmers Market directory by ZIP code and/or state.
@@ -198,10 +198,10 @@ async def search_farmers_markets(
 
 @tool
 async def search_csa(
-    zip_code: str | None = None,
-    state: str | None = None,
-    radius_miles: int = 25,
-    client: httpx.AsyncClient | None = None,
+        zip_code: str | None = None,
+        state: str | None = None,
+        radius_miles: int = 25,
+        client: httpx.AsyncClient | None = None,
 ) -> CSASearchResult | USDAToolError:
     """
     Search the USDA Community Supported Agriculture (CSA) directory.
@@ -324,9 +324,9 @@ async def search_csa(
 
 @tool
 async def search_all_local_food(
-    zip_code: str | None = None,
-    state: str | None = None,
-    radius_miles: int = 25,
+        zip_code: str | None = None,
+        state: str | None = None,
+        radius_miles: int = 25,
 ) -> dict[str, FarmersMarketSearchResult | CSASearchResult | USDAToolError]:
     """
     Query both the farmers-market and CSA directories **concurrently** and

@@ -16,7 +16,7 @@ Architecture rules enforced
 """
 
 import logging
-from typing import List, Optional
+from typing import Optional
 
 import httpx
 from langchain_core.tools import tool
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Defaulting to Serper.dev as it's the standard for LangChain SERP tools
 _SERPER_URL = "https://google.serper.dev/search"
+
 
 # ---------------------------------------------------------------------------
 # Public tool function
@@ -67,7 +68,7 @@ async def search_linkedin_profiles(name: str, company: Optional[str] = None) -> 
         "q": search_query,
         "num": 5  # Top 5 results are usually enough
     }
-    
+
     headers = {
         "X-API-KEY": settings.SERP_API_KEY,
         "Content-Type": "application/json"
@@ -76,15 +77,15 @@ async def search_linkedin_profiles(name: str, company: Optional[str] = None) -> 
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(_SERPER_URL, headers=headers, json=payload)
-            
+
             if response.status_code == 403:
-                 return LinkedInSearchResult(
+                return LinkedInSearchResult(
                     query=search_query,
                     profiles=[],
                     total_found=0,
                     error="Invalid SERP_API_KEY."
                 )
-            
+
             if response.status_code != 200:
                 return LinkedInSearchResult(
                     query=search_query,
@@ -95,7 +96,7 @@ async def search_linkedin_profiles(name: str, company: Optional[str] = None) -> 
 
             data = response.json()
             organic_results = data.get("organic", [])
-            
+
             profiles = []
             for result in organic_results:
                 link = result.get("link", "")

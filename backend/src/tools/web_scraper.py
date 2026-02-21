@@ -9,6 +9,7 @@ from playwright.async_api import async_playwright
 
 from src.core.config import settings
 
+
 @tool
 async def scrape_website_content(url: str) -> str:
     """

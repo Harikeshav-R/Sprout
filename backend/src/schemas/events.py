@@ -1,10 +1,13 @@
 from typing import List, Optional
+
 from pydantic import BaseModel
+
 
 class EventError(BaseModel):
     source: str = "event_search"
     error: str
     detail: Optional[str] = None
+
 
 class LocalEvent(BaseModel):
     title: str
@@ -13,6 +16,7 @@ class LocalEvent(BaseModel):
     description: Optional[str] = None
     link: Optional[str] = None
     venue: Optional[str] = None
+
 
 class EventResult(BaseModel):
     events: List[LocalEvent]
