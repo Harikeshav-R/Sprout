@@ -21,6 +21,7 @@ from typing import Any
 import httpx
 
 from src.core.config import settings
+from langchain_core.tools import tool
 from src.schemas.usda import (
     CSAListing,
     CSASearchResult,
@@ -66,6 +67,7 @@ async def _fetch_usda(client: httpx.AsyncClient, endpoint: str, params: dict[str
 # ---------------------------------------------------------------------------
 
 
+@tool
 async def search_farmers_markets(
     zip_code: str | None = None,
     state: str | None = None,
@@ -194,6 +196,7 @@ async def search_farmers_markets(
     )
 
 
+@tool
 async def search_csa(
     zip_code: str | None = None,
     state: str | None = None,
@@ -319,6 +322,7 @@ async def search_csa(
     )
 
 
+@tool
 async def search_all_local_food(
     zip_code: str | None = None,
     state: str | None = None,
