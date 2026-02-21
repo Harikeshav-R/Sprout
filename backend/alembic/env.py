@@ -24,7 +24,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 from sqlmodel import SQLModel
 # Import all models here so Alembic can discover them
-from src.models import farm
+from src.models import *
 
 target_metadata = SQLModel.metadata
 
