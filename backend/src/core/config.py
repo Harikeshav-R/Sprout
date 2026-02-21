@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,7 +22,19 @@ class Settings(BaseSettings):
     # Optional API key — leave unset (None) to omit the apikey param entirely.
     USDA_API_KEY: str | None = None
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
+    # Third-party Enrichment APIs (Phase 2 SDR)
+    HUNTER_API_KEY: str | None = None
+    SERP_API_KEY: str | None = None  # For LinkedIn/Google Search
+
+    _env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+    if not os.path.exists(_env_file):
+        _env_file = None
+
+    model_config = SettingsConfigDict(
+        env_file=_env_file,
+        case_sensitive=True,
+        extra="ignore"
+    )
 
 
 settings = Settings()
