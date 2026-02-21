@@ -2,7 +2,7 @@ import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src import crud
@@ -23,7 +23,7 @@ class DraftRequest(BaseModel):
     farm_id: uuid.UUID
     restaurant_name: str
     restaurant_location: str
-    restaurant_email: str
+    restaurant_email: EmailStr
     menu_keywords_matched: Optional[list[str]] = None
     match_score: Optional[float] = None
 
