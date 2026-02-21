@@ -15,6 +15,9 @@ from src.tools.social_media import scrape_social_media
 from src.tools.domain_availability import check_domain_availability
 from src.tools.competitor_analysis import analyze_competitor_gap
 from src.tools.seo_tools import fetch_local_seo_keywords
+from src.tools.email_finder import find_decision_maker_email
+from src.tools.review_analyzer import analyze_restaurant_reviews
+from src.tools.linkedin_finder import search_linkedin_profiles
 
 # Export Langchain Tools
 TOOLS = [
@@ -27,7 +30,10 @@ TOOLS = [
     scrape_social_media,
     check_domain_availability,
     analyze_competitor_gap,
-    fetch_local_seo_keywords
+    fetch_local_seo_keywords,
+    find_decision_maker_email,
+    analyze_restaurant_reviews,
+    search_linkedin_profiles,
 ]
 
 __all__ = [
@@ -41,6 +47,9 @@ __all__ = [
     "check_domain_availability",
     "analyze_competitor_gap",
     "fetch_local_seo_keywords",
+    "find_decision_maker_email",
+    "analyze_restaurant_reviews",
+    "search_linkedin_profiles",
     "TOOLS",
     "CSAListing",
     "CSASearchResult",

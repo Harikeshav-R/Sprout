@@ -8,6 +8,9 @@ from src.schemas.usda import (
     USDABaseListing,
     USDAToolError,
 )
+from src.schemas.email_finder import EmailContact, EmailSearchResult
+from src.schemas.review_analyzer import Review, ReviewAnalysisResult
+from src.schemas.linkedin_finder import LinkedInProfile, LinkedInSearchResult
 
 __all__ = [
     "FarmCreate",
@@ -20,4 +23,10 @@ __all__ = [
     "FarmersMarketSearchResult",
     "CSASearchResult",
     "USDAToolError",
+    "EmailContact",
+    "EmailSearchResult",
+    "Review",
+    "ReviewAnalysisResult",
+    "LinkedInProfile",
+    "LinkedInSearchResult",
 ]
