@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     # Optional API key — leave unset (None) to omit the apikey param entirely.
     USDA_API_KEY: str | None = None
 
+    # Gmail API (for outreach email sending)
+    GMAIL_CREDENTIALS_PATH: str = "credentials.json"
+    GMAIL_TOKEN_PATH: str = "token.json"
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
 

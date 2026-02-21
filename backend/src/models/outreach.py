@@ -18,6 +18,9 @@ class OutreachStatus(str, enum.Enum):
 
 class OutreachEmailBase(SQLModel):
     farm_id: uuid.UUID = Field(foreign_key="farm.id", index=True)
+    recipient_email: str = Field(min_length=1)
+    subject: str = Field(min_length=1)
+    body: str = Field(min_length=1)
     restaurant_name: str = Field(min_length=1)
     restaurant_location: str = Field(min_length=1)
     match_score: Optional[float] = Field(ge=0, le=100, default=None)
@@ -25,7 +28,6 @@ class OutreachEmailBase(SQLModel):
         default=OutreachStatus.drafted,
         sa_column=Column(ENUM(OutreachStatus, name="outreachstatus_enum", create_type=True))
     )
-    draft_content: str = Field(min_length=1)
     menu_keywords_matched: Optional[str] = None
 
 
