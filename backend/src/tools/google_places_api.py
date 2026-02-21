@@ -22,6 +22,7 @@ import asyncio
 import logging
 
 import httpx
+from langchain_core.tools import tool
 
 from src.core.config import settings
 from src.schemas.google_places import NearbyBusiness, PlacesSearchResult
@@ -218,6 +219,7 @@ async def _run_text_search(
 # Public tool function  (called from LangGraph nodes)
 # ---------------------------------------------------------------------------
 
+@tool
 async def search_nearby_businesses(
         location: str,
         query: str,
@@ -238,7 +240,7 @@ async def search_nearby_businesses(
                        Default = 48 280 m ≈ 30 miles (Phase-3 spec).
         max_results:   Maximum results to return (Google cap: 20 per page).
 
-    Returns:
+    Returns:l
         PlacesSearchResult – a Pydantic model containing a list of
         NearbyBusiness objects with name, address, rating, website, and
         coordinates ready for Phase-1 scraping or Phase-3 email drafting.
