@@ -11,6 +11,10 @@ from src.tools.usda_api import (
     USDAToolError,
 )
 from src.tools.web_scraper import scrape_website_content, analyze_website_visuals
+from src.tools.social_media import scrape_social_media
+from src.tools.domain_availability import check_domain_availability
+from src.tools.competitor_analysis import analyze_competitor_gap
+from src.tools.seo_tools import fetch_local_seo_keywords
 
 # Export Langchain Tools
 TOOLS = [
@@ -19,7 +23,11 @@ TOOLS = [
     search_farmers_markets,
     search_nearby_businesses,
     scrape_website_content,
-    analyze_website_visuals
+    analyze_website_visuals,
+    scrape_social_media,
+    check_domain_availability,
+    analyze_competitor_gap,
+    fetch_local_seo_keywords
 ]
 
 __all__ = [
@@ -29,6 +37,10 @@ __all__ = [
     "search_nearby_businesses",
     "scrape_website_content",
     "analyze_website_visuals",
+    "scrape_social_media",
+    "check_domain_availability",
+    "analyze_competitor_gap",
+    "fetch_local_seo_keywords",
     "TOOLS",
     "CSAListing",
     "CSASearchResult",
