@@ -22,6 +22,7 @@ import asyncio
 import logging
 
 import httpx
+from langchain_core.tools import tool
 
 from src.core.config import settings
 from src.schemas.google_places import NearbyBusiness, PlacesSearchResult
@@ -31,8 +32,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # API endpoints
 # ---------------------------------------------------------------------------
-_GEOCODING_URL = "https://maps.googleapis.com/maps/api/geocode/json"
-_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
+# Defined in config.py:
+# settings.GOOGLE_MAPS_GEOCODING_URL
+# settings.GOOGLE_PLACES_TEXT_SEARCH_URL
 
 # ---------------------------------------------------------------------------
 # Tunables
@@ -111,7 +113,7 @@ async def _geocode_address(
     response = await _request_with_retry(
         client,
         "GET",
-        _GEOCODING_URL,
+        settings.GOOGLE_MAPS_GEOCODING_URL,
         params={"address": address, "key": settings.GOOGLE_MAPS_API_KEY},
         timeout=REQUEST_TIMEOUT,
     )
@@ -203,7 +205,7 @@ async def _run_text_search(
     response = await _request_with_retry(
         client,
         "POST",
-        _TEXT_SEARCH_URL,
+        settings.GOOGLE_PLACES_TEXT_SEARCH_URL,
         json=payload,
         headers=headers,
         timeout=REQUEST_TIMEOUT,
@@ -218,6 +220,7 @@ async def _run_text_search(
 # Public tool function  (called from LangGraph nodes)
 # ---------------------------------------------------------------------------
 
+@tool
 async def search_nearby_businesses(
         location: str,
         query: str,
@@ -238,7 +241,7 @@ async def search_nearby_businesses(
                        Default = 48 280 m ≈ 30 miles (Phase-3 spec).
         max_results:   Maximum results to return (Google cap: 20 per page).
 
-    Returns:
+    Returns:l
         PlacesSearchResult – a Pydantic model containing a list of
         NearbyBusiness objects with name, address, rating, website, and
         coordinates ready for Phase-1 scraping or Phase-3 email drafting.

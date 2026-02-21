@@ -4,7 +4,8 @@ from typing import List, Optional
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.models.farm import Farm, FarmCreate
+from src.models.farm import Farm
+from src.schemas.farm import FarmCreate
 
 
 async def create_farm(session: AsyncSession, farm_in: FarmCreate) -> Farm:
