@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     # Optional API key — leave unset (None) to omit the apikey param entirely.
     USDA_API_KEY: str | None = None
 
+    # Gmail API (for outreach email sending)
+    GMAIL_CREDENTIALS_PATH: str = "credentials.json"
+    GMAIL_TOKEN_PATH: str = "token.json"
     # Third-party Enrichment APIs (Phase 2 SDR)
     HUNTER_API_KEY: str | None = None
     HUNTER_API_BASE_URL: str = "https://api.hunter.io/v2"
