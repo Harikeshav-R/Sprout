@@ -12,8 +12,8 @@ class PricingAnalyticsResult(BaseModel):
     trend_slope: float
     current_average: float
     predicted_next_price: float
-    confidence_interval_low: float
-    confidence_interval_high: float
+    prediction_interval_low: float
+    prediction_interval_high: float
     moving_averages: list[float]
 
 

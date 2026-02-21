@@ -8,6 +8,6 @@ class PricePredictionResponse(BaseModel):
     county: str
     trend_slope: float
     predicted_price: float
-    ci_low: float
-    ci_high: float
+    pi_low: float
+    pi_high: float
     plain_language_insight: str

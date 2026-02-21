@@ -1,5 +1,3 @@
-import numpy as np
-from scipy.stats import linregress, t
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -9,16 +7,17 @@ from src.schemas.pricing_analytics import InsufficientDataResult, PricingAnalyti
 
 class PricingAnalyticsService:
     """Async service that fetches historical commodity prices and produces
-    trend analysis, moving-average smoothing, and confidence intervals."""
+    trend analysis, moving-average smoothing, and prediction intervals."""
 
     MIN_DATA_POINTS = 3
     MOVING_AVERAGE_WINDOW = 3
+    CONFIDENCE_LEVEL = 0.95
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def _fetch_prices(
-        self, crop_name: str, county: str
+            self, crop_name: str, county: str
     ) -> list[CommodityPricing]:
         """Fetch all historical prices for a crop/county pair, ordered by date."""
         statement = (
@@ -31,7 +30,7 @@ class PricingAnalyticsService:
         return list(result.all())
 
     async def analyze(
-        self, crop_name: str, county: str
+            self, crop_name: str, county: str
     ) -> PricingAnalyticsResult | InsufficientDataResult:
         """Run full predictive analytics pipeline for a crop in a county.
 
@@ -41,9 +40,13 @@ class PricingAnalyticsService:
         3. Convert dates to ordinal numbers for regression.
         4. Compute linear regression (trend slope + predicted next price).
         5. Compute moving averages over a rolling window.
-        6. Compute confidence interval for the next predicted price using
+        6. Compute prediction interval for the next predicted price using
            the t-distribution and the standard error of the residuals.
         """
+        # Defer heavy imports to avoid penalising application cold-start
+        import numpy as np
+        from scipy.stats import linregress
+
         records = await self._fetch_prices(crop_name, county)
 
         if len(records) < self.MIN_DATA_POINTS:
@@ -74,8 +77,8 @@ class PricingAnalyticsService:
         # --- Current Average ---
         current_average = float(np.mean(prices))
 
-        # --- Confidence Interval ---
-        ci_low, ci_high = self._confidence_interval(
+        # --- Prediction Interval ---
+        pi_low, pi_high = self._prediction_interval(
             prices, dates_ordinal, slope, intercept, next_ordinal
         )
 
@@ -86,35 +89,44 @@ class PricingAnalyticsService:
             trend_slope=round(slope, 6),
             current_average=round(current_average, 2),
             predicted_next_price=round(predicted_next_price, 2),
-            confidence_interval_low=round(ci_low, 2),
-            confidence_interval_high=round(ci_high, 2),
+            prediction_interval_low=round(pi_low, 2),
+            prediction_interval_high=round(pi_high, 2),
             moving_averages=[round(v, 2) for v in moving_averages],
         )
 
     @staticmethod
-    def _moving_average(prices: np.ndarray, window: int) -> list[float]:
+    def _moving_average(prices, window: int) -> list[float]:
         """Compute simple moving average with the given window size."""
+        import numpy as np
+
         if len(prices) < window:
             return prices.tolist()
         cumsum = np.cumsum(prices)
         cumsum[window:] = cumsum[window:] - cumsum[:-window]
-        return (cumsum[window - 1 :] / window).tolist()
+        return (cumsum[window - 1:] / window).tolist()
 
-    def _confidence_interval(
-        self,
-        prices: np.ndarray,
-        x: np.ndarray,
-        slope: float,
-        intercept: float,
-        x_next: float,
+    def _prediction_interval(
+            self,
+            prices,
+            x,
+            slope: float,
+            intercept: float,
+            x_next: float,
     ) -> tuple[float, float]:
-        """Calculate confidence interval for the predicted next price.
+        """Calculate prediction interval for a new individual observation.
+
+        This is a *prediction interval* (not a confidence interval for the
+        mean): the formula includes the leading ``1 +`` term in the standard
+        error, which accounts for the inherent variability of a single future
+        observation around the regression line.
 
         Uses the t-distribution to account for small-sample uncertainty.
-        The confidence level is controlled by self.CONFIDENCE_LEVEL.
         Handles the zero-variance edge case (all prices identical) by
         returning the predicted price as both bounds.
         """
+        import numpy as np
+        from scipy.stats import t
+
         n = len(prices)
         residuals = prices - (intercept + slope * x)
         residual_std = float(np.std(residuals, ddof=2)) if n > 2 else 0.0
@@ -136,6 +148,8 @@ class PricingAnalyticsService:
             predicted = intercept + slope * x_next
             return (float(predicted), float(predicted))
 
+        # Prediction interval SE includes the leading 1.0 term for
+        # individual-observation variability
         se_pred = residual_std * np.sqrt(
             1.0 + 1.0 / n + (x_next - x_mean) ** 2 / ss_x
         )
