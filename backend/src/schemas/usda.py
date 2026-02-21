@@ -38,10 +38,10 @@ class FarmersMarketListing(USDABaseListing):
     season4date: str | None = None
     season4time: str | None = None
     # Payment / benefit program acceptance
-    credit: str | None = None   # credit / debit cards
-    wic: str | None = None      # WIC programme vouchers
+    credit: str | None = None  # credit / debit cards
+    wic: str | None = None  # WIC programme vouchers
     wiccash: str | None = None  # WIC FMNP cash
-    snap: str | None = None     # SNAP / EBT
+    snap: str | None = None  # SNAP / EBT
 
 
 class CSAListing(USDABaseListing):

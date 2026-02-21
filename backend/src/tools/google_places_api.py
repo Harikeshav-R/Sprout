@@ -22,6 +22,7 @@ import asyncio
 import logging
 
 import httpx
+from langchain_core.tools import tool
 
 from src.core.config import settings
 from src.schemas.google_places import NearbyBusiness, PlacesSearchResult
@@ -31,18 +32,19 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # API endpoints
 # ---------------------------------------------------------------------------
-_GEOCODING_URL = "https://maps.googleapis.com/maps/api/geocode/json"
-_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
+# Defined in config.py:
+# settings.GOOGLE_MAPS_GEOCODING_URL
+# settings.GOOGLE_PLACES_TEXT_SEARCH_URL
 
 # ---------------------------------------------------------------------------
 # Tunables
 # ---------------------------------------------------------------------------
 # 30 miles expressed in metres (matches the Phase-3 "30-mile radius" rule in AGENTS.md)
 DEFAULT_RADIUS_METERS: int = 48_280
-DEFAULT_MAX_RESULTS: int = 20   # Google Places (New) hard cap per page
-REQUEST_TIMEOUT: float = 10.0   # seconds per individual HTTP call
+DEFAULT_MAX_RESULTS: int = 20  # Google Places (New) hard cap per page
+REQUEST_TIMEOUT: float = 10.0  # seconds per individual HTTP call
 MAX_RETRIES: int = 3
-_BACKOFF_BASE: float = 1.5      # seconds; wait = _BACKOFF_BASE ** attempt
+_BACKOFF_BASE: float = 1.5  # seconds; wait = _BACKOFF_BASE ** attempt
 
 # Fields we ask Google to return (reduces payload size and cost)
 _FIELD_MASK = ",".join([
@@ -62,10 +64,10 @@ _FIELD_MASK = ",".join([
 # ---------------------------------------------------------------------------
 
 async def _request_with_retry(
-    client: httpx.AsyncClient,
-    method: str,
-    url: str,
-    **kwargs,
+        client: httpx.AsyncClient,
+        method: str,
+        url: str,
+        **kwargs,
 ) -> httpx.Response:
     """Sends an HTTP request with exponential-backoff retry.
 
@@ -102,7 +104,7 @@ async def _request_with_retry(
 
 
 async def _geocode_address(
-    client: httpx.AsyncClient, address: str
+        client: httpx.AsyncClient, address: str
 ) -> tuple[float, float]:
     """Converts a street address string to (latitude, longitude).
 
@@ -111,7 +113,7 @@ async def _geocode_address(
     response = await _request_with_retry(
         client,
         "GET",
-        _GEOCODING_URL,
+        settings.GOOGLE_MAPS_GEOCODING_URL,
         params={"address": address, "key": settings.GOOGLE_MAPS_API_KEY},
         timeout=REQUEST_TIMEOUT,
     )
@@ -128,7 +130,7 @@ async def _geocode_address(
 
 
 async def _resolve_location(
-    client: httpx.AsyncClient, location: str
+        client: httpx.AsyncClient, location: str
 ) -> tuple[float, float]:
     """Accepts either a 'lat,lng' string or a human-readable address."""
     parts = location.strip().split(",")
@@ -149,10 +151,10 @@ def _parse_place(raw: dict) -> NearbyBusiness | None:
     if not loc or ("latitude" not in loc and "longitude" not in loc):
         logger.debug("Skipping place '%s' due to missing location data", raw.get("id"))
         return None
-        
+
     lat = float(loc.get("latitude", 0.0))
     lng = float(loc.get("longitude", 0.0))
-    
+
     # Skip clearly invalid coordinates (e.g. defaulting to 0,0)
     if lat == 0.0 and lng == 0.0:
         logger.debug("Skipping place '%s' due to (0,0) coordinates", raw.get("id"))
@@ -174,12 +176,12 @@ def _parse_place(raw: dict) -> NearbyBusiness | None:
 
 
 async def _run_text_search(
-    client: httpx.AsyncClient,
-    query: str,
-    lat: float,
-    lng: float,
-    radius_meters: int,
-    max_results: int,
+        client: httpx.AsyncClient,
+        query: str,
+        lat: float,
+        lng: float,
+        radius_meters: int,
+        max_results: int,
 ) -> list[NearbyBusiness]:
     """Executes a Google Places Text Search (New API) and parses the results."""
     payload = {
@@ -203,7 +205,7 @@ async def _run_text_search(
     response = await _request_with_retry(
         client,
         "POST",
-        _TEXT_SEARCH_URL,
+        settings.GOOGLE_PLACES_TEXT_SEARCH_URL,
         json=payload,
         headers=headers,
         timeout=REQUEST_TIMEOUT,
@@ -218,11 +220,12 @@ async def _run_text_search(
 # Public tool function  (called from LangGraph nodes)
 # ---------------------------------------------------------------------------
 
+@tool
 async def search_nearby_businesses(
-    location: str,
-    query: str,
-    radius_meters: int = DEFAULT_RADIUS_METERS,
-    max_results: int = DEFAULT_MAX_RESULTS,
+        location: str,
+        query: str,
+        radius_meters: int = DEFAULT_RADIUS_METERS,
+        max_results: int = DEFAULT_MAX_RESULTS,
 ) -> PlacesSearchResult:
     """Search for nearby businesses using the Google Places API (New – v1).
 
@@ -238,7 +241,7 @@ async def search_nearby_businesses(
                        Default = 48 280 m ≈ 30 miles (Phase-3 spec).
         max_results:   Maximum results to return (Google cap: 20 per page).
 
-    Returns:
+    Returns:l
         PlacesSearchResult – a Pydantic model containing a list of
         NearbyBusiness objects with name, address, rating, website, and
         coordinates ready for Phase-1 scraping or Phase-3 email drafting.

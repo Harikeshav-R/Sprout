@@ -1,18 +1,20 @@
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.exc import IntegrityError
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src import crud
 from src.db.session import get_session
 from src.models.pricing import CommodityPricingCreate, CommodityPricingRead
-from src import crud
 
 router = APIRouter()
 
+
 @router.post("/", response_model=CommodityPricingRead)
 async def create_pricing(
-    *, session: AsyncSession = Depends(get_session), pricing_in: CommodityPricingCreate
+        *, session: AsyncSession = Depends(get_session), pricing_in: CommodityPricingCreate
 ):
     try:
         return await crud.create_pricing(session, pricing_in)
@@ -20,19 +22,21 @@ async def create_pricing(
         await session.rollback()
         raise HTTPException(status_code=400, detail="Pricing record for this crop, county, and date already exists")
 
+
 @router.get("/", response_model=List[CommodityPricingRead])
 async def read_pricings(
-    session: AsyncSession = Depends(get_session),
-    crop_name: Optional[str] = None,
-    county: Optional[str] = None,
-    offset: int = 0,
-    limit: int = 100,
+        session: AsyncSession = Depends(get_session),
+        crop_name: Optional[str] = None,
+        county: Optional[str] = None,
+        offset: int = 0,
+        limit: int = 100,
 ):
     return await crud.get_pricings(session, crop_name=crop_name, county=county, offset=offset, limit=limit)
 
+
 @router.get("/{id}", response_model=CommodityPricingRead)
 async def read_pricing(
-    *, session: AsyncSession = Depends(get_session), id: uuid.UUID
+        *, session: AsyncSession = Depends(get_session), id: uuid.UUID
 ):
     pricing = await crud.get_pricing(session, id)
     if not pricing:
