@@ -132,7 +132,7 @@ async def audit_leads_node(state: DiscoveryState) -> Dict[str, Any]:
     audited_leads: List[FarmLead] = []
 
     llm = ChatOpenAI(
-        model="google/gemini-2.5-flash",
+        model=settings.OPENROUTER_DEFAULT_MODEL,
         temperature=0,
         openai_api_key=settings.OPENROUTER_API_KEY,
         base_url=settings.OPENROUTER_BASE_URL

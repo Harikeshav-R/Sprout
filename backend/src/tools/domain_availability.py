@@ -38,7 +38,7 @@ async def check_domain_availability(farm_name: str, farm_description: str) -> st
         return json.dumps({"error": "No OPENROUTER_API_KEY available for domain generation.", "status": "error"})
 
     llm = ChatOpenAI(
-        model="google/gemini-2.5-flash",
+        model=settings.OPENROUTER_DEFAULT_MODEL,
         temperature=0.7,
         openai_api_key=settings.OPENROUTER_API_KEY,
         base_url=settings.OPENROUTER_BASE_URL

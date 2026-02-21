@@ -26,7 +26,7 @@ async def fetch_local_seo_keywords(zip_code: str, farm_type: str) -> str:
         return json.dumps({"error": "No OPENROUTER_API_KEY available for SEO generation.", "status": "error"})
 
     llm = ChatOpenAI(
-        model="google/gemini-2.5-flash",
+        model=settings.OPENROUTER_DEFAULT_MODEL,
         temperature=0.4,
         openai_api_key=settings.OPENROUTER_API_KEY,
         base_url=settings.OPENROUTER_BASE_URL
