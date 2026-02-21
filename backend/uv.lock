@@ -58,6 +58,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "sqlalchemy" },
+    { name = "sqlmodel" },
 ]
 
 [package.metadata]
@@ -69,6 +70,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pydantic-settings", specifier = ">=2.13.1" },
     { name = "sqlalchemy", specifier = ">=2.0.46" },
+    { name = "sqlmodel", specifier = ">=0.0.36" },
 ]
 
 [[package]]
@@ -689,6 +691,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/33/75/f28622ba6dde79cd545055ea7bd4062dc934e0621f7b3be2891f8563f8de/sqlalchemy-2.0.46-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:ff33c6e6ad006bbc0f34f5faf941cfc62c45841c64c0a058ac38c799f15b5ede", size = 3470008, upload-time = "2026-01-21T18:33:11.725Z" },
     { url = "https://files.pythonhosted.org/packages/a9/42/4afecbbc38d5e99b18acef446453c76eec6fbd03db0a457a12a056836e22/sqlalchemy-2.0.46-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:82ec52100ec1e6ec671563bbd02d7c7c8d0b9e71a0723c72f22ecf52d1755330", size = 3476137, upload-time = "2026-01-21T18:45:15.001Z" },
     { url = "https://files.pythonhosted.org/packages/fc/a1/9c4efa03300926601c19c18582531b45aededfb961ab3c3585f1e24f120b/sqlalchemy-2.0.46-py3-none-any.whl", hash = "sha256:f9c11766e7e7c0a2767dda5acb006a118640c9fc0a4104214b96269bfb78399e", size = 1937882, upload-time = "2026-01-21T18:22:10.456Z" },
+]
+
+[[package]]
+name = "sqlmodel"
+version = "0.0.36"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "sqlalchemy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3c/7d/d00c45b87c9eda656860edde63a9a391fddf4a7a76ea83bfba408f0bd1c5/sqlmodel-0.0.36.tar.gz", hash = "sha256:c3e0062d0c737ce230bc5a0fa83e0d4d572da38a17b640fab7dfbb0635cbfb2a", size = 85552, upload-time = "2026-02-21T15:58:25.973Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/28/16/f68ff5ae1d8f8d5abc25b924cb2cb305619715b75896127f02f334770223/sqlmodel-0.0.36-py3-none-any.whl", hash = "sha256:480ae41ade27cd4d38e083e96a26bac7691ceae297ae1a08a508b081a9f60a74", size = 27223, upload-time = "2026-02-21T15:58:27.298Z" },
 ]
 
 [[package]]
