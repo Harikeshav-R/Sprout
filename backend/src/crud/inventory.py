@@ -35,6 +35,10 @@ async def update_inventory(
     return inventory
 
 async def delete_inventory(session: AsyncSession, *, inventory: FarmInventory) -> FarmInventory:
-    await session.delete(inventory)
-    await session.commit()
+    session.delete(inventory)
+    try:
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        raise e
     return inventory
