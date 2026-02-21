@@ -1,11 +1,3 @@
-"""
-Predictive Pricing Analytics Service (Phase 4)
-
-Performs regression analysis and confidence interval calculations on
-historical CommodityPricing data using scipy.stats and numpy.
-Inspired by: https://nbviewer.org/github/Mo-Khalifa96/Data-Analysis-and-Machine-Learning-for-Predictive-Pricing
-"""
-
 import numpy as np
 from scipy.stats import linregress, t
 from sqlmodel import select
