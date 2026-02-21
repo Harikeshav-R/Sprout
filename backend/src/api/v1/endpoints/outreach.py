@@ -21,11 +21,6 @@ class OutreachStatusUpdate(BaseModel):
 class DraftRequest(BaseModel):
     """Request body for AI-drafting an outreach email."""
     farm_id: uuid.UUID
-    farm_name: str
-    location_state: str
-    location_zip: str
-    crops: list[str]
-    website_url: Optional[str] = None
     restaurant_name: str
     restaurant_location: str
     restaurant_email: str
@@ -80,12 +75,15 @@ async def create_draft(
     if not farm:
         raise HTTPException(status_code=400, detail="Farm not found")
 
+    inventory = await crud.get_inventories(session, farm_id=req.farm_id)
+    crop_names = [item.crop_name for item in inventory]
+
     farm_ctx = FarmContext(
-        farm_name=req.farm_name,
-        location_state=req.location_state,
-        location_zip=req.location_zip,
-        crops=req.crops,
-        website_url=req.website_url,
+        farm_name=farm.farm_name,
+        location_state=farm.location_state,
+        location_zip=farm.location_zip,
+        crops=crop_names,
+        website_url=farm.website_url,
     )
     restaurant = RestaurantTarget(
         name=req.restaurant_name,

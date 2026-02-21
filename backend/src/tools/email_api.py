@@ -34,13 +34,12 @@ def _load_credentials() -> Credentials:
         HTTPException: If token.json is missing or credentials cannot be refreshed.
     """
     token_path = Path(settings.GMAIL_TOKEN_PATH)
-    credentials_path = Path(settings.GMAIL_CREDENTIALS_PATH)
 
     if not token_path.exists():
         raise HTTPException(
             status_code=503,
             detail=(
-                "Gmail not configured: token.json not found. "
+                f"Gmail not configured: '{token_path.name}' not found. "
                 "Run 'python -m scripts.setup_gmail_token' to authorize."
             ),
         )
