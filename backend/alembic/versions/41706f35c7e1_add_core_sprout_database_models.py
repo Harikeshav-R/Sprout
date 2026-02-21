@@ -85,6 +85,7 @@ def downgrade() -> None:
     op.drop_table('transaction')
     op.drop_index(op.f('ix_outreachemail_farm_id'), table_name='outreachemail')
     op.drop_table('outreachemail')
+    op.execute('DROP TYPE IF EXISTS outreachstatus_enum')
     op.drop_index(op.f('ix_farminventory_farm_id'), table_name='farminventory')
     op.drop_index(op.f('ix_farminventory_crop_name'), table_name='farminventory')
     op.drop_table('farminventory')
