@@ -25,11 +25,11 @@ async def _fetch_serp_events(client: httpx.AsyncClient, query: str, location: st
         "location": location,
         "hl": "en",
         "gl": "us",
-        "api_key": settings.SERP_API_KEY
+        "api_key": settings.SERPAPI_API_KEY
     }
 
-    if not settings.SERP_API_KEY:
-        logger.warning("SERP_API_KEY not set. Returning empty results.")
+    if not settings.SERPAPI_API_KEY:
+        logger.warning("SERPAPI_API_KEY not set. Returning empty results.")
         return {}
 
     logger.debug("SerpApi GET %s | query=%s location=%s", base_url, query, location)
