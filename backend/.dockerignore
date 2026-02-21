@@ -1,0 +1,35 @@
+# Python Caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment configurations
+.Python
+.uv/
+
+# Testing/Typing Caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+Dockerfile.dev
+docker-compose.yml
+docker-compose.dev.yml
