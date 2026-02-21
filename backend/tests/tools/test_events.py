@@ -5,7 +5,7 @@ from src.tools.events import search_local_food_events, EventResult, EventError
 
 @pytest.fixture(autouse=True)
 def mock_serp_settings(mocker):
-    mocker.patch("src.core.config.settings.SERP_API_KEY", "test_key")
+    mocker.patch("src.core.config.settings.SERPAPI_API_KEY", "test_key")
 
 @respx.mock
 @pytest.mark.asyncio

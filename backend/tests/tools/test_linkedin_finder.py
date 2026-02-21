@@ -5,17 +5,18 @@ from src.tools.linkedin_finder import search_linkedin_profiles, LinkedInSearchRe
 
 @pytest.fixture(autouse=True)
 def mock_serper_settings(mocker):
-    mocker.patch("src.core.config.settings.SERP_API_KEY", "test_key")
+    mocker.patch("src.core.config.settings.SERPAPI_API_KEY", "test_key")
 
 @respx.mock
 @pytest.mark.asyncio
 async def test_search_linkedin_profiles_success():
     # Arrange
-    respx.post("https://google.serper.dev/search").mock(
+    # SerpApi uses GET and returns 'organic_results'
+    respx.get("https://serpapi.com/search").mock(
         return_value=httpx.Response(
             200,
             json={
-                "organic": [
+                "organic_results": [
                     {
                         "title": "Chef John - LinkedIn",
                         "link": "https://www.linkedin.com/in/chefjohn",
