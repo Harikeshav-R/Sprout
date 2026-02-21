@@ -1,4 +1,3 @@
-from src.schemas.farm import FarmCreate, FarmRead
 from src.schemas.google_places import NearbyBusiness, PlacesSearchResult
 from src.schemas.usda import (
     CSAListing,
@@ -10,8 +9,6 @@ from src.schemas.usda import (
 )
 
 __all__ = [
-    "FarmCreate",
-    "FarmRead",
     "NearbyBusiness",
     "PlacesSearchResult",
     "USDABaseListing",
