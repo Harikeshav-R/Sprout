@@ -30,9 +30,8 @@ class Settings(BaseSettings):
     HUNTER_API_KEY: str | None = None
     HUNTER_API_BASE_URL: str = "https://api.hunter.io/v2"
     
-    SERP_API_KEY: str | None = None  # For LinkedIn/Google Search/Events
+    SERPAPI_API_KEY: str | None = None  # For LinkedIn/Google Search/Events
     SERPAPI_BASE_URL: str = "https://serpapi.com"
-    SERPER_BASE_URL: str = "https://google.serper.dev"
 
     # Phase 3: Market Intelligence & Weather
     USDA_MARKET_NEWS_API_KEY: str | None = None
