@@ -57,9 +57,9 @@ async def search_usda_node(state: DiscoveryState) -> Dict[str, Any]:
         for listing in fm_result.listings:
             # USDA listings name is often the market name, but we treat it as a potential lead
             raw_leads.append(FarmLead(
-                farm_name=listing.name,
-                location_state=state_code or "Unknown",  # USDA result doesn't always have state in listing
-                location_zip=zip_code or "Unknown",  # USDA result doesn't always have zip in listing
+                farm_name=listing.listing_name or "Unknown",
+                location_state=state_code or "Unknown", # USDA result doesn't always have state in listing
+                location_zip=zip_code or "Unknown",     # USDA result doesn't always have zip in listing
                 source="usda_market",
             ))
 
@@ -68,11 +68,12 @@ async def search_usda_node(state: DiscoveryState) -> Dict[str, Any]:
     if isinstance(csa_result, CSASearchResult):
         for listing in csa_result.listings:
             raw_leads.append(FarmLead(
-                farm_name=listing.name,
+                farm_name=listing.listing_name or "Unknown",
                 location_state=state_code or "Unknown",
                 location_zip=zip_code or "Unknown",
                 source="usda_csa",
             ))
+    
 
     logger.info(f"Found {len(raw_leads)} raw leads from USDA.")
     # Return a dict to update the state
