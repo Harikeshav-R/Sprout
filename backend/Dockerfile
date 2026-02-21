@@ -17,4 +17,4 @@ RUN uv pip install --system --no-cache -r pyproject.toml
 COPY . .
 
 # Run without reload
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src:app", "--host", "0.0.0.0", "--port", "8000"]
