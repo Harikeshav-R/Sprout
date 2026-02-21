@@ -21,7 +21,6 @@ class PricingAnalyticsService:
 
     MIN_DATA_POINTS = 3
     MOVING_AVERAGE_WINDOW = 3
-    CONFIDENCE_LEVEL = 0.95
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
