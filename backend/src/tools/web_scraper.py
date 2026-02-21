@@ -4,12 +4,10 @@ import json
 from bs4 import BeautifulSoup
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from playwright.async_api import async_playwright
 
 from src.core.config import settings
-
 
 @tool
 async def scrape_website_content(url: str) -> str:
@@ -83,8 +81,8 @@ async def analyze_website_visuals(url: str) -> str:
         str: A comprehensive visual critique and a generated prompt for the Website Builder agent.
     """
     try:
-        if not settings.OPENAI_API_KEY and not settings.GEMINI_API_KEY:
-            return "Error: No LLM API keys provided in configuration (OPENAI_API_KEY or GEMINI_API_KEY)."
+        if not settings.OPENROUTER_API_KEY:
+            return "Error: No OPENROUTER_API_KEY provided in configuration."
 
         screenshot_bytes = None
         async with async_playwright() as p:
@@ -102,24 +100,13 @@ async def analyze_website_visuals(url: str) -> str:
         # Encode the image to base64
         base64_image = base64.b64encode(screenshot_bytes).decode('utf-8')
 
-        # Determine which LLM to use based on available keys
-        # We prefer Gemini if both are available because the user might prefer one over the other
-        llm = None
-        if settings.GEMINI_API_KEY:
-            llm = ChatGoogleGenerativeAI(
-                model="gemini-1.5-pro",
-                temperature=0.2,
-                google_api_key=settings.GEMINI_API_KEY
-            )
-        elif settings.OPENAI_API_KEY:
-            llm = ChatOpenAI(
-                model="gpt-4o",
-                temperature=0.2,
-                api_key=settings.OPENAI_API_KEY
-            )
-
-        if llm is None:
-            return "Error: Could not initialize LLM with provided API keys."
+        # Use OpenRouter for multimodal analysis
+        llm = ChatOpenAI(
+            model="google/gemini-2.5-flash",
+            temperature=0.2,
+            openai_api_key=settings.OPENROUTER_API_KEY,
+            base_url=settings.OPENROUTER_BASE_URL
+        )
 
         prompt = f"""
         You are an expert web designer and developer analyzing an existing farm business website.
