@@ -1,5 +1,4 @@
 """
-<<<<<<< HEAD
 Predictive Pricing Analytics Service (Phase 4)
 
 Performs regression analysis and confidence interval calculations on
@@ -7,38 +6,13 @@ historical CommodityPricing data using scipy.stats and numpy.
 Inspired by: https://nbviewer.org/github/Mo-Khalifa96/Data-Analysis-and-Machine-Learning-for-Predictive-Pricing
 """
 
-from datetime import date as datetime_date
-
 import numpy as np
-from pydantic import BaseModel
 from scipy.stats import linregress, t
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.models.pricing import CommodityPricing
-
-
-class PricingAnalyticsResult(BaseModel):
-    """Output schema for predictive pricing analytics."""
-
-    crop_name: str
-    county: str
-    data_points: int
-    trend_slope: float
-    current_average: float
-    predicted_next_price: float
-    confidence_interval_low: float
-    confidence_interval_high: float
-    moving_averages: list[float]
-
-
-class InsufficientDataResult(BaseModel):
-    """Returned when there is not enough historical data."""
-
-    crop_name: str
-    county: str
-    data_points: int
-    message: str = "Not enough data for statistical significance"
+from src.schemas.pricing_analytics import InsufficientDataResult, PricingAnalyticsResult
 
 
 class PricingAnalyticsService:
@@ -76,7 +50,7 @@ class PricingAnalyticsService:
         3. Convert dates to ordinal numbers for regression.
         4. Compute linear regression (trend slope + predicted next price).
         5. Compute moving averages over a rolling window.
-        6. Compute 95% confidence interval for the next predicted price using
+        6. Compute confidence interval for the next predicted price using
            the t-distribution and the standard error of the residuals.
         """
         records = await self._fetch_prices(crop_name, county)
@@ -135,17 +109,18 @@ class PricingAnalyticsService:
         cumsum[window:] = cumsum[window:] - cumsum[:-window]
         return (cumsum[window - 1 :] / window).tolist()
 
-    @staticmethod
     def _confidence_interval(
+        self,
         prices: np.ndarray,
         x: np.ndarray,
         slope: float,
         intercept: float,
         x_next: float,
     ) -> tuple[float, float]:
-        """Calculate 95% confidence interval for the predicted next price.
+        """Calculate confidence interval for the predicted next price.
 
         Uses the t-distribution to account for small-sample uncertainty.
+        The confidence level is controlled by self.CONFIDENCE_LEVEL.
         Handles the zero-variance edge case (all prices identical) by
         returning the predicted price as both bounds.
         """
@@ -176,41 +151,8 @@ class PricingAnalyticsService:
 
         predicted = intercept + slope * x_next
 
-        # t critical value for 95% two-tailed interval
-        t_crit = t.ppf((1 + 0.95) / 2, df)
+        # t critical value using configured confidence level
+        t_crit = t.ppf((1 + self.CONFIDENCE_LEVEL) / 2, df)
         margin = t_crit * se_pred
 
         return (float(predicted - margin), float(predicted + margin))
-
-
-async def get_price_prediction(
-    session: AsyncSession, crop_name: str, county: str
-) -> dict | None:
-    """
-    Temporary mock function mirroring the API layer's initial development.
-    We will soon upgrade the API router to connect to the actual
-    PricingAnalyticsService above.
-    """
-    _mock_predictions: dict[tuple[str, str], dict] = {
-        ("tomatoes", "fresno"): {
-            "trend_slope": 0.12,
-            "predicted_price": 4.50,
-            "ci_low": 4.10,
-            "ci_high": 4.90,
-        },
-        ("strawberries", "monterey"): {
-            "trend_slope": -0.08,
-            "predicted_price": 3.20,
-            "ci_low": 2.85,
-            "ci_high": 3.55,
-        },
-        ("corn", "kern"): {
-            "trend_slope": 0.05,
-            "predicted_price": 6.75,
-            "ci_low": 6.30,
-            "ci_high": 7.20,
-        },
-    }
-
-    key = (crop_name.strip().lower(), county.strip().lower())
-    return _mock_predictions.get(key)

@@ -3,7 +3,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.session import get_session
 from src.schemas.analytics import PricePredictionResponse
-from src.services.predictive_pricing import get_price_prediction
+from src.schemas.pricing_analytics import InsufficientDataResult
+from src.services.predictive_pricing import PricingAnalyticsService
 
 router = APIRouter()
 
@@ -20,28 +21,33 @@ async def predictive_pricing(
     based on the trend slope direction.
     """
 
-    prediction = await get_price_prediction(session, crop_name, county)
+    service = PricingAnalyticsService(session)
+    result = await service.analyze(crop_name, county)
 
-    if prediction is None:
+    if isinstance(result, InsufficientDataResult):
         raise HTTPException(
             status_code=404,
-            detail=f"Not enough data to generate a prediction for '{crop_name}' in '{county}'.",
+            detail=f"Not enough historical data to generate a prediction for '{crop_name}' in '{county}' "
+            f"({result.data_points} data point(s) found, minimum {service.MIN_DATA_POINTS} required).",
         )
 
-    direction = "rise" if prediction["trend_slope"] >= 0 else "fall"
+    direction = "rising" if result.trend_slope >= 0 else "falling"
+    confidence_pct = int(service.CONFIDENCE_LEVEL * 100)
 
     insight = (
-        f"There is a 95% probability the price for {crop_name} will "
-        f"{direction} to ${prediction['predicted_price']:.2f} next month "
-        f"based on historical trends."
+        f"Based on {result.data_points} historical data points, the price trend for "
+        f"{crop_name} in {county} is {direction} (slope: {result.trend_slope:+.4f}/day). "
+        f"The next projected price is ${result.predicted_next_price:.2f}, with a "
+        f"{confidence_pct}% confidence interval of "
+        f"${result.confidence_interval_low:.2f}–${result.confidence_interval_high:.2f}."
     )
 
     return PricePredictionResponse(
         crop_name=crop_name,
         county=county,
-        trend_slope=prediction["trend_slope"],
-        predicted_price=prediction["predicted_price"],
-        ci_low=prediction["ci_low"],
-        ci_high=prediction["ci_high"],
+        trend_slope=result.trend_slope,
+        predicted_price=result.predicted_next_price,
+        ci_low=result.confidence_interval_low,
+        ci_high=result.confidence_interval_high,
         plain_language_insight=insight,
     )
