@@ -7,6 +7,7 @@ import Navigation from './components/Navigation';
 import LandingPage from './pages/LandingPage';
 import DiscoveryPage from './pages/DiscoveryPage';
 import DashboardPage from './pages/DashboardPage';
+import OnboardingPage from './pages/OnboardingPage';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -27,6 +28,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/discovery" element={<DiscoveryPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
       </Routes>
     </>

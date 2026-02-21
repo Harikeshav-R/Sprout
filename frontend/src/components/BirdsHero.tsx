@@ -9,7 +9,8 @@ const MIN_SPEED = 3.5;
 
 export default function BirdsHero() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [showSoundHint, setShowSoundHint] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const toggleSoundRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -42,22 +43,29 @@ export default function BirdsHero() {
       birdSound.setVolume(1.5);
       birdSound.setRefDistance(400);
       birdSound.setMaxDistance(3000);
+      // Auto-start sound (may require user interaction first due to browser policy)
+      const tryPlay = async () => {
+        if (listener.context.state === 'suspended') {
+          await listener.context.resume();
+        }
+        birdSound.play();
+      };
+      tryPlay();
     });
 
     const soundEmitter = new THREE.Object3D();
     soundEmitter.add(birdSound);
     scene.add(soundEmitter);
 
-    let audioStarted = false;
-
-    const initAudio = async () => {
-      if (audioStarted || !birdSound.buffer) return;
-      audioStarted = true;
-      if (listener.context.state === 'suspended') {
-        await listener.context.resume();
+    toggleSoundRef.current = () => {
+      if (!birdSound.buffer) return;
+      if (birdSound.isPlaying) {
+        birdSound.pause();
+        setSoundEnabled(false);
+      } else {
+        birdSound.play();
+        setSoundEnabled(true);
       }
-      birdSound.play();
-      setShowSoundHint(false);
     };
 
     // Mouse & hit plane
@@ -80,10 +88,7 @@ export default function BirdsHero() {
       isMouseActive = true;
     };
 
-    const handlePointerDown = () => initAudio();
-
     container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('pointerdown', handlePointerDown);
 
     // Bird geometry
     const baseGeometry = new THREE.BufferGeometry();
@@ -255,8 +260,9 @@ export default function BirdsHero() {
       cancelAnimationFrame(frameId);
       window.removeEventListener('resize', handleResize);
       container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('pointerdown', handlePointerDown);
       birdSound.stop();
+      // Suspend AudioContext to ensure no sound leaks to other pages
+      listener.context.suspend();
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -266,14 +272,17 @@ export default function BirdsHero() {
 
   return (
     <div ref={containerRef} className="absolute inset-0 z-[1] pointer-events-auto">
-      {showSoundHint && (
-        <div
-          className="absolute bottom-6 right-6 text-gray-600 font-sans text-sm pointer-events-none select-none transition-opacity duration-500"
-          style={{ textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}
-        >
-          Click to enable sound.
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleSoundRef.current?.();
+        }}
+        className="absolute bottom-6 right-6 z-[100] text-gray-600 font-sans text-sm select-none transition-opacity duration-500 hover:text-gray-800 px-3 py-1.5 rounded-lg hover:bg-white/20 cursor-pointer"
+        style={{ textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}
+      >
+        {soundEnabled ? 'Click to disable sound' : 'Click to enable sound'}
+      </button>
     </div>
   );
 }

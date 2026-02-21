@@ -50,7 +50,7 @@ const features = [
   {
     icon: Mic,
     title: 'Voice Field Agent',
-    description: 'Log inventory and sales by simply calling in from the field—hands-free convenience.',
+    description: 'Log inventory and sales by simply calling in from the field, hands-free convenience.',
     image: '/feature-voice.jpg',
     color: 'bg-sprout-sage/10',
     iconColor: 'text-sprout-sage'

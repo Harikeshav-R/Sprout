@@ -36,8 +36,8 @@ export default function Hero() {
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-sprout-cream via-sprout-cream/80 to-transparent pointer-events-none" />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center text-center max-w-4xl px-6 w-full">
+      {/* Content - pointer-events-none so sound button beneath can receive clicks */}
+      <div className="relative z-10 flex flex-col items-center text-center max-w-4xl px-6 w-full pointer-events-none">
         <h1 className="hero-animate font-display font-medium text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.05] tracking-tight text-[#1a1a1a] mb-6">
           <Typewriter
             text="Your farm deserves to be found"

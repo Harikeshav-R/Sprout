@@ -62,8 +62,8 @@ module.exports = {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Montserrat', 'system-ui', 'sans-serif'],
+        sans: ['Canela', 'Georgia', 'serif'],
+        display: ['Canela', 'Georgia', 'serif'],
         mono: ['Space Mono', 'monospace'],
       },
       borderRadius: {

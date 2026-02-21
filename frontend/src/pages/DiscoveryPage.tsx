@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   Search, MapPin, ExternalLink, 
   ChevronDown, SlidersHorizontal, Building2, 
@@ -115,7 +116,12 @@ export default function DiscoveryPage() {
   const farmTypes = ['All', 'Organic', 'CSA', 'Farmers Market', 'U-Pick', 'Livestock'];
 
   return (
-    <div className="min-h-screen bg-sprout-cream pt-20">
+    <motion.div
+      className="min-h-screen bg-sprout-cream"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1.5, ease: 'easeOut' }}
+    >
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-6 py-4">
         <div className="max-w-7xl mx-auto">
@@ -338,6 +344,6 @@ export default function DiscoveryPage() {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
