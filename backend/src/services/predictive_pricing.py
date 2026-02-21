@@ -1,4 +1,5 @@
 """
+<<<<<<< HEAD
 Predictive Pricing Analytics Service (Phase 4)
 
 Performs regression analysis and confidence interval calculations on
@@ -180,3 +181,36 @@ class PricingAnalyticsService:
         margin = t_crit * se_pred
 
         return (float(predicted - margin), float(predicted + margin))
+
+
+async def get_price_prediction(
+    session: AsyncSession, crop_name: str, county: str
+) -> dict | None:
+    """
+    Temporary mock function mirroring the API layer's initial development.
+    We will soon upgrade the API router to connect to the actual
+    PricingAnalyticsService above.
+    """
+    _mock_predictions: dict[tuple[str, str], dict] = {
+        ("tomatoes", "fresno"): {
+            "trend_slope": 0.12,
+            "predicted_price": 4.50,
+            "ci_low": 4.10,
+            "ci_high": 4.90,
+        },
+        ("strawberries", "monterey"): {
+            "trend_slope": -0.08,
+            "predicted_price": 3.20,
+            "ci_low": 2.85,
+            "ci_high": 3.55,
+        },
+        ("corn", "kern"): {
+            "trend_slope": 0.05,
+            "predicted_price": 6.75,
+            "ci_low": 6.30,
+            "ci_high": 7.20,
+        },
+    }
+
+    key = (crop_name.strip().lower(), county.strip().lower())
+    return _mock_predictions.get(key)
