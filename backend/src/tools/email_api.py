@@ -76,6 +76,7 @@ def _build_mime_message(to: str, subject: str, body: str) -> dict:
     """Construct a base64url-encoded MIME message for the Gmail API."""
     message = MIMEText(body)
     message["to"] = to
+    message["from"] = "me"
     message["subject"] = subject
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
     return {"raw": raw}
@@ -105,7 +106,7 @@ def _send_via_gmail(creds: Credentials, to: str, subject: str, body: str) -> str
         logger.error("Gmail API error: %s", e)
         raise HTTPException(
             status_code=502,
-            detail=f"Gmail API error: {e.reason}",
+            detail=f"Gmail API error: {e.resp.reason}",
         )
 
 
