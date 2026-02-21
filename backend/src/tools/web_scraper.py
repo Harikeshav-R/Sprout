@@ -103,7 +103,7 @@ async def analyze_website_visuals(url: str) -> str:
 
         # Use OpenRouter for multimodal analysis
         llm = ChatOpenAI(
-            model="google/gemini-2.5-flash",
+            model=settings.OPENROUTER_DEFAULT_MODEL,
             temperature=0.2,
             openai_api_key=settings.OPENROUTER_API_KEY,
             base_url=settings.OPENROUTER_BASE_URL

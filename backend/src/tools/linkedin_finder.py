@@ -5,13 +5,12 @@ LangGraph tool for the SDR / Matchmaking pipeline (Phase 2).
 
 Given a person's name and/or company, this tool searches for their
 LinkedIn profile to facilitate personalized outreach.
-It uses a SERP API (like Serper.dev or Google Custom Search) via the
-SERP_API_KEY setting.
+It uses SerpApi's Google Search engine.
 
 Architecture rules enforced
 ----------------------------
 - Fully async (httpx.AsyncClient + async def)
-- API key from Pydantic Settings
+- API key from Pydantic Settings (SERPAPI_API_KEY)
 - Lives in backend/src/tools/ per AGENTS.md
 """
 
@@ -25,13 +24,6 @@ from src.core.config import settings
 from src.schemas.linkedin_finder import LinkedInProfile, LinkedInSearchResult
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# API endpoints
-# ---------------------------------------------------------------------------
-# Defaulting to Serper.dev as it's the standard for LangChain SERP tools
-# Constructed dynamically using settings.SERPER_BASE_URL
-
 
 # ---------------------------------------------------------------------------
 # Public tool function
@@ -51,12 +43,12 @@ async def search_linkedin_profiles(name: str, company: Optional[str] = None) -> 
     Returns:
         LinkedInSearchResult: A list of potential profile matches with URLs and snippets.
     """
-    if not settings.SERP_API_KEY:
+    if not settings.SERPAPI_API_KEY:
         return LinkedInSearchResult(
             query=f"{name} {company or ''}".strip(),
             profiles=[],
             total_found=0,
-            error="SERP_API_KEY is not configured. Cannot perform LinkedIn search."
+            error="SERPAPI_API_KEY is not configured. Cannot perform LinkedIn search."
         )
 
     # Construct a targeted query
@@ -64,28 +56,31 @@ async def search_linkedin_profiles(name: str, company: Optional[str] = None) -> 
     if company:
         search_query += f" {company}"
 
-    payload = {
+    # SerpApi params for Google Search
+    params = {
+        "engine": "google",
         "q": search_query,
-        "num": 5  # Top 5 results are usually enough
+        "location": "United States",
+        "google_domain": "google.com",
+        "gl": "us",
+        "hl": "en",
+        "num": 5,  # Top 5 results are usually enough
+        "api_key": settings.SERPAPI_API_KEY
     }
 
-    headers = {
-        "X-API-KEY": settings.SERP_API_KEY,
-        "Content-Type": "application/json"
-    }
-
-    url = f"{settings.SERPER_BASE_URL}/search"
+    url = f"{settings.SERPAPI_BASE_URL}/search"
 
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(url, headers=headers, json=payload)
+            # SerpApi uses GET requests
+            response = await client.get(url, params=params)
 
             if response.status_code == 403:
                 return LinkedInSearchResult(
                     query=search_query,
                     profiles=[],
                     total_found=0,
-                    error="Invalid SERP_API_KEY."
+                    error="Invalid SERPAPI_API_KEY."
                 )
 
             if response.status_code != 200:
@@ -93,11 +88,11 @@ async def search_linkedin_profiles(name: str, company: Optional[str] = None) -> 
                     query=search_query,
                     profiles=[],
                     total_found=0,
-                    error=f"Serper API error: {response.status_code}"
+                    error=f"SerpApi error: {response.status_code}"
                 )
 
             data = response.json()
-            organic_results = data.get("organic", [])
+            organic_results = data.get("organic_results", [])
 
             profiles = []
             for result in organic_results:

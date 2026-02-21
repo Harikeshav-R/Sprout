@@ -8,7 +8,15 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # Database
-    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@db:5432/sprout"
+    POSTGRES_SERVER: str = "db"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "sprout"
+    POSTGRES_PORT: str = "5432"
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # Google Maps / Places API
     GOOGLE_MAPS_API_KEY: str = ""
@@ -19,6 +27,7 @@ class Settings(BaseSettings):
     # LLM API Keys
     OPENROUTER_API_KEY: str | None = None
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_DEFAULT_MODEL: str = "google/gemini-2.5-flash-lite"
 
     # USDA Local Food Directories API
     # Base URL for the USDA Local Food Portal (no trailing slash).
@@ -33,9 +42,8 @@ class Settings(BaseSettings):
     HUNTER_API_KEY: str | None = None
     HUNTER_API_BASE_URL: str = "https://api.hunter.io/v2"
     
-    SERP_API_KEY: str | None = None  # For LinkedIn/Google Search/Events
+    SERPAPI_API_KEY: str | None = None  # For LinkedIn/Google Search/Events
     SERPAPI_BASE_URL: str = "https://serpapi.com"
-    SERPER_BASE_URL: str = "https://google.serper.dev"
 
     # Phase 3: Market Intelligence & Weather
     USDA_MARKET_NEWS_API_KEY: str | None = None

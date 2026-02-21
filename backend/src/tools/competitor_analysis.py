@@ -75,7 +75,7 @@ async def analyze_competitor_gap(latitude: float, longitude: float, farm_name: s
 
         # 3. Analyze differences to find the "gap"
         llm = ChatOpenAI(
-            model="google/gemini-2.5-flash",
+            model=settings.OPENROUTER_DEFAULT_MODEL,
             temperature=0.2,
             openai_api_key=settings.OPENROUTER_API_KEY,
             base_url=settings.OPENROUTER_BASE_URL
