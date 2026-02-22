@@ -11,16 +11,16 @@ import {
 const mockFarms = [
   {
     id: 1,
-    name: "Sunset Valley Organics",
-    location: "Portland, OR",
+    name: "Covered Bridge Farms",
+    location: "Geneva, OH",
     score: 85,
     type: "Organic",
     summary: "Strong Google listing, active social media",
     hasWebsite: true,
     hasSocial: true,
     sources: ["USDA", "Google"],
-    lat: 45.5152,
-    lng: -122.6784
+    lat: 41.8019,
+    lng: -80.9488
   },
   {
     id: 2,
