@@ -18,5 +18,5 @@ COPY . .
 # Expose Vite dev server port
 EXPOSE 5173
 
-# Run Vite with host flag for Docker
-CMD ["pnpm", "run", "dev", "--", "--host"]
+# Run Vite dev server
+CMD ["pnpm", "run", "dev"]

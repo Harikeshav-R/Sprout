@@ -2,6 +2,7 @@ import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Body
+from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src import crud
@@ -12,28 +13,36 @@ from src.schemas.farm import FarmCreate, FarmRead
 router = APIRouter()
 
 
+class DiscoverRequest(BaseModel):
+    farm_name: str = "My Farm"
+    farm_offerings: str = "organic produce"
+    zip_code: Optional[str] = None
+    state: Optional[str] = None
+
+
 @router.post("/discover", response_model=dict)
-async def discover_farms(
-        zip_code: Optional[str] = Body(None),
-        state: Optional[str] = Body(None),
-):
+async def discover_farms(body: DiscoverRequest):
     """
     Trigger the autonomous Discovery Agent to find farms in a specific location.
     This process:
     1. Queries USDA databases (Farmers Markets & CSAs).
     2. Enriches data with Google Places (Business info, Websites).
     3. Audits digital presence (Score < 50 = Target Lead).
-    4. Saves high-priority targets to the database.
+    4. Analyzes market gaps and generates SEO keywords.
     """
-    if not zip_code and not state:
+    if not body.zip_code and not body.state:
         raise HTTPException(status_code=400, detail="Must provide zip_code or state.")
 
-    # Input state can still be a dict; LangGraph will coerce it or we can pass a model
     initial_state = {
-        "search_criteria": {"zip_code": zip_code, "state": state},
-        "raw_leads": [],
-        "enriched_leads": [],
-        "audited_leads": [],
+        "search_criteria": {
+            "farm_name": body.farm_name,
+            "farm_offerings": body.farm_offerings,
+            "zip_code": body.zip_code,
+            "state": body.state,
+        },
+        "raw_competitors": [],
+        "enriched_competitors": [],
+        "audited_competitors": [],
         "errors": []
     }
 
@@ -48,9 +57,11 @@ async def discover_farms(
 
     return {
         "message": "Discovery complete",
-        "total_found": len(final_state_dict.get("raw_leads", [])),
-        "audited": len(final_state_dict.get("audited_leads", [])),
-        "leads": final_state_dict.get("audited_leads", [])
+        "total_found": len(final_state_dict.get("raw_competitors", [])),
+        "audited": len(final_state_dict.get("audited_competitors", [])),
+        "leads": final_state_dict.get("audited_competitors", []),
+        "market_gap_report": final_state_dict.get("market_gap_report"),
+        "seo_report": final_state_dict.get("seo_report"),
     }
 
 

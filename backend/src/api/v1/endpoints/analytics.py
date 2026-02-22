@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+import uuid
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.session import get_session
@@ -7,6 +11,20 @@ from src.schemas.pricing_analytics import InsufficientDataResult
 from src.services.predictive_pricing import PricingAnalyticsService
 
 router = APIRouter()
+
+
+class AnalyticsPipelineRequest(BaseModel):
+    farm_id: uuid.UUID
+    county: str
+    zip_code: str
+    target_crops: List[str]
+
+
+class AnalyticsPipelineResponse(BaseModel):
+    predictions: List[dict] = []
+    insights: List[str] = []
+    persisted_count: int = 0
+    errors: List[str] = []
 
 
 @router.get("/predictive-pricing", response_model=PricePredictionResponse)
@@ -50,4 +68,32 @@ async def predictive_pricing(
         pi_low=result.prediction_interval_low,
         pi_high=result.prediction_interval_high,
         plain_language_insight=insight,
+    )
+
+
+@router.post("/run", response_model=AnalyticsPipelineResponse)
+async def run_analytics_pipeline(body: AnalyticsPipelineRequest):
+    """
+    Trigger the full analytics pipeline:
+    1. Ingest latest pricing data (fetch from USDA / mock)
+    2. Persist to CommodityPricing table
+    3. Run predictive modeling via analytics agent
+    4. Generate LLM-powered insights
+
+    Returns predictions, insights, and any errors.
+    """
+    from src.agents.data_ingestion import data_ingestion_agent
+
+    result = await data_ingestion_agent.ainvoke({
+        "farm_id": body.farm_id,
+        "target_crops": body.target_crops,
+        "county": body.county,
+        "zip_code": body.zip_code,
+    })
+
+    return AnalyticsPipelineResponse(
+        predictions=result.get("analytics_predictions", []),
+        insights=result.get("analytics_insights", []),
+        persisted_count=result.get("persisted_count", 0),
+        errors=result.get("errors", []),
     )
