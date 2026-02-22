@@ -110,40 +110,39 @@ async def propose_domains_node(state: BuilderState) -> Dict[str, Any]:
 
 async def generate_website_node(state: BuilderState) -> Dict[str, Any]:
     """
-    Generates a functional React SPA layout injected with the farm's persona.
+    Generates a complete HTML + Tailwind CSS landing page for the farm.
     """
     logger.info("Executing generate_website_node...")
 
     llm = ChatOpenAI(
-        model=settings.OPENROUTER_DEFAULT_MODEL,
+        model="anthropic/claude-sonnet-4",
         temperature=0.2, # Lower temperature for code generation
         openai_api_key=settings.OPENROUTER_API_KEY,
         base_url=settings.OPENROUTER_BASE_URL
     )
 
     persona = state.brand_persona
-    
+
     prompt = f"""
-    You are an expert frontend developer and designer specializing in Tailwind CSS and React.
-    Your task is to generate a single-file React component (a functional SPA) for a farm's landing page.
-    
+    You are an expert frontend developer and designer specializing in Tailwind CSS.
+    Your task is to generate a complete, self-contained HTML page for a farm's landing page.
+
     Here is the farm's information:
     Farm Name: {state.farm_name}
     Tagline: {persona.tagline if persona else ''}
     Story: {persona.farm_story_summary if persona else state.farm_story}
     Voice/Tone: {persona.tone_and_voice if persona else ''}
     Inventory Items: {state.inventory_data}
-    
+
     Requirements:
-    1. Create a beautiful, modern, responsive landing page using Tailwind CSS classes.
-    2. The component MUST be a valid React functional component named `FarmLandingPage`.
-    3. Include sections for: Hero, About Us (Story), Our Inventory (Products), and a Contact/Footer.
-    4. Use placeholder images via `https://placehold.co/600x400` or similar reliable services, styled beautifully.
-    5. Do NOT use any external component libraries (like shadcn/ui or lucide-react) unless you define SVG icons inline. Stick to standard HTML/Tailwind.
-    6. Ensure the design matches the requested "Voice/Tone" (e.g. rustic, modern, boutique).
-    7. Return ONLY the raw JSX/TSX code as a string. Do NOT wrap it in markdown blockquotes (```jsx). Just the raw code.
-    
-    Begin your response with `import React from 'react';` and end with `export default FarmLandingPage;`.
+    1. Return a COMPLETE HTML document starting with <!DOCTYPE html>.
+    2. Include the Tailwind CSS CDN via <script src="https://cdn.tailwindcss.com"></script> in the <head>.
+    3. Create a beautiful, modern, responsive landing page using only plain HTML and Tailwind CSS classes.
+    4. Include sections for: Hero, About Us (Story), Our Inventory (Products), and a Contact/Footer.
+    5. Use placeholder images via `https://placehold.co/600x400` or similar reliable services, styled beautifully.
+    6. Use inline SVG icons where needed. Do NOT use any JavaScript frameworks or external libraries besides Tailwind.
+    7. Ensure the design matches the requested "Voice/Tone" (e.g. rustic, modern, boutique).
+    8. Return ONLY the raw HTML. Do NOT wrap it in markdown code fences.
     """
 
     try:
@@ -157,16 +156,14 @@ async def generate_website_node(state: BuilderState) -> Dict[str, Any]:
             if lines[-1].startswith("```"):
                 lines = lines[:-1]
             content = "\n".join(lines)
-            
+
         return {"website_layouts": [content]}
     except Exception as e:
         logger.error(f"Error generating website: {e}")
         # Minimal fallback
-        fallback = f"""import React from 'react';
-        export default function FarmLandingPage() {{
-            return <div className="p-8 text-center text-red-500">Error generating layout. Please try again.</div>;
-        }}
-        """
+        fallback = """<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><script src="https://cdn.tailwindcss.com"></script></head>
+<body><div class="p-8 text-center text-red-500">Error generating layout. Please try again.</div></body></html>"""
         return {"website_layouts": [fallback]}
 
 

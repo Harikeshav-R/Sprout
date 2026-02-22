@@ -3,14 +3,16 @@ import {
   LayoutDashboard, TrendingUp, Utensils, Mic, Globe,
   ChevronRight, ArrowUpRight, ArrowDownRight, Star,
   CheckCircle2, AlertCircle, XCircle, ExternalLink,
-  Download, Send, Phone, Clock, Calendar,
-  Users, MessageSquare, Edit3, CheckCheck, Loader2
+  Send, Phone, Clock, Calendar,
+  Users, MessageSquare, Edit3, CheckCheck, Loader2,
+  RefreshCw, Copy, Code2, Eye
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { fetchPredictivePricing, fetchInventory } from '../lib/api';
+import { fetchPredictivePricing, fetchInventory, fetchDiscovery, buildFarmWebsite } from '../lib/api';
+import type { CompetitorFarm, DiscoveryResponse, BuilderResponse } from '../lib/api';
 import type { PricePrediction, InventoryItem } from '../types/analytics';
 
 const callLogs = [
@@ -20,27 +22,27 @@ const callLogs = [
 ];
 
 const restaurantMatches = [
-  { 
-    id: 1, 
-    name: 'Blue Table Bistro', 
+  {
+    id: 1,
+    name: 'Blue Table Bistro',
     cuisine: 'Farm-to-Table',
     distance: '12 miles',
     matchScore: 94,
     menuMatches: ['heirloom tomatoes', 'organic zucchini'],
     status: 'draft'
   },
-  { 
-    id: 2, 
-    name: 'Harvest Kitchen', 
+  {
+    id: 2,
+    name: 'Harvest Kitchen',
     cuisine: 'Seasonal American',
     distance: '18 miles',
     matchScore: 87,
     menuMatches: ['bell peppers', 'cucumbers'],
     status: 'sent'
   },
-  { 
-    id: 3, 
-    name: 'Green Leaf Cafe', 
+  {
+    id: 3,
+    name: 'Green Leaf Cafe',
     cuisine: 'Vegetarian',
     distance: '8 miles',
     matchScore: 82,
@@ -89,6 +91,40 @@ export default function DashboardPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [marketLoading, setMarketLoading] = useState(false);
   const [marketError, setMarketError] = useState<string | null>(null);
+  const [builderResult, setBuilderResult] = useState<BuilderResponse | null>(null);
+  const [builderLoading, setBuilderLoading] = useState(false);
+  const [builderError, setBuilderError] = useState<string | null>(null);
+  const [showCode, setShowCode] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  // Discovery agent state
+  const [discoveryResults, setDiscoveryResults] = useState<CompetitorFarm[]>([]);
+  const [discoveryLoading, setDiscoveryLoading] = useState(false);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+  const [marketGapReport, setMarketGapReport] = useState<Record<string, any> | null>(null);
+  const [seoReport, setSeoReport] = useState<Record<string, any> | null>(null);
+  const [discoveryRan, setDiscoveryRan] = useState(false);
+
+  const runDiscovery = async () => {
+    setDiscoveryLoading(true);
+    setDiscoveryError(null);
+    try {
+      const data = await fetchDiscovery({
+        farm_name: 'Sunset Valley Organics',
+        farm_offerings: 'organic produce',
+        zip_code: '97201',
+        state: 'OR',
+      });
+      setDiscoveryResults(data.leads);
+      setMarketGapReport(data.market_gap_report);
+      setSeoReport(data.seo_report);
+      setDiscoveryRan(true);
+    } catch (e: any) {
+      setDiscoveryError(e.message || 'Discovery failed');
+    } finally {
+      setDiscoveryLoading(false);
+    }
+  };
 
   // Fetch market data when market tab is active
   useEffect(() => {
@@ -117,209 +153,416 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const renderAuditSection = () => (
-    <div className="space-y-6">
-      {/* Overall Score */}
-      <div className="bg-white rounded-2xl card-shadow p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="font-display font-bold text-xl text-sprout-green mb-1">Digital Health Score</h2>
-            <p className="text-sm text-gray-500">Overall assessment of your farm's online presence</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className={`font-display font-bold text-5xl ${getScoreColor(67)}`}>67</div>
-              <div className="text-sm text-gray-500">out of 100</div>
-            </div>
-            <div className="w-20 h-20 rounded-full border-4 border-gray-100 flex items-center justify-center relative">
-              <svg className="absolute inset-0 w-full h-full -rotate-90">
-                <circle cx="40" cy="40" r="36" fill="none" stroke="#E5E7EB" strokeWidth="4" />
-                <circle cx="40" cy="40" r="36" fill="none" stroke="#D4A03A" strokeWidth="4" 
-                  strokeDasharray={`${67 * 2.26} 226`} strokeLinecap="round" />
-              </svg>
-            </div>
-          </div>
-        </div>
+  const handleGenerateWebsite = async () => {
+    setBuilderLoading(true);
+    setBuilderError(null);
+    try {
+      const farmId = '00000000-0000-0000-0000-000000000000'; // TODO: Replace with actual farm ID from auth context
+      const result = await buildFarmWebsite(
+        farmId,
+        'Sunset Valley Organics',
+        'Third-generation family farm specializing in organic vegetables and sustainable farming practices. Known for heirloom tomatoes and community-supported agriculture programs.',
+        'Tomatoes, Zucchini, Bell Peppers, Cucumbers, Fresh Herbs'
+      );
+      setBuilderResult(result);
+    } catch (e: any) {
+      setBuilderError(e.message || 'Failed to generate website');
+    } finally {
+      setBuilderLoading(false);
+    }
+  };
 
-        {/* Category Breakdown */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { name: 'Website', score: 45, icon: Globe, status: 'needs-work' },
-            { name: 'SEO', score: 52, icon: TrendingUp, status: 'fair' },
-            { name: 'Google Business', score: 78, icon: Star, status: 'good' },
-            { name: 'Social Media', score: 35, icon: Users, status: 'poor' },
-          ].map((category) => (
-            <div key={category.name} className="bg-gray-50 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <category.icon className="w-4 h-4 text-gray-400" />
-                <span className="text-sm font-medium text-gray-700">{category.name}</span>
-              </div>
-              <div className={`font-display font-bold text-2xl ${getScoreColor(category.score)}`}>
-                {category.score}
-              </div>
-              <div className="w-full h-1.5 bg-gray-200 rounded-full mt-2 overflow-hidden">
-                <div className={`h-full ${getScoreBg(category.score)} rounded-full`} style={{ width: `${category.score}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
 
-      {/* Recommendations */}
-      <div className="bg-white rounded-2xl card-shadow p-6">
-        <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Priority Recommendations</h3>
-        <div className="space-y-3">
-          {[
-            { text: 'Your website is not mobile-friendly', priority: 'high', icon: XCircle },
-            { text: 'Add alt text to your product images for better SEO', priority: 'medium', icon: AlertCircle },
-            { text: 'Your Facebook page hasn\'t posted in 6 months', priority: 'high', icon: XCircle },
-            { text: 'Google Business Profile is well-optimized', priority: 'good', icon: CheckCircle2 },
-          ].map((rec, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
-              <rec.icon className={`w-5 h-5 mt-0.5 ${
-                rec.priority === 'high' ? 'text-red-500' : 
-                rec.priority === 'medium' ? 'text-amber-500' : 'text-emerald-500'
-              }`} />
-              <div className="flex-1">
-                <p className="text-sm text-gray-700">{rec.text}</p>
-              </div>
-              {rec.priority !== 'good' && (
-                <button className="text-xs text-sprout-gold hover:text-sprout-terracotta font-medium">
-                  Fix Now
+  const renderAuditSection = () => {
+    const scoredCompetitors = discoveryResults.filter((c) => c.digital_health_score != null);
+    const avgScore = scoredCompetitors.length
+      ? Math.round(scoredCompetitors.reduce((sum, c) => sum + (c.digital_health_score ?? 0), 0) / scoredCompetitors.length)
+      : 0;
+
+    return (
+      <div className="space-y-6">
+        {/* Run Discovery CTA / Score Header */}
+        <div className="bg-white rounded-2xl card-shadow p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="font-display font-bold text-xl text-sprout-green mb-1">Digital Health Score</h2>
+              <p className="text-sm text-gray-500">
+                {discoveryRan
+                  ? `Competitor benchmark across ${scoredCompetitors.length} audited farms`
+                  : 'Run discovery to benchmark competitors in your area'}
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              {discoveryRan ? (
+                <>
+                  <div className="text-right">
+                    <div className={`font-display font-bold text-5xl ${getScoreColor(avgScore)}`}>{avgScore}</div>
+                    <div className="text-sm text-gray-500">avg out of 100</div>
+                  </div>
+                  <div className="w-20 h-20 rounded-full border-4 border-gray-100 flex items-center justify-center relative">
+                    <svg className="absolute inset-0 w-full h-full -rotate-90">
+                      <circle cx="40" cy="40" r="36" fill="none" stroke="#E5E7EB" strokeWidth="4" />
+                      <circle cx="40" cy="40" r="36" fill="none" stroke={avgScore >= 80 ? '#10B981' : avgScore >= 60 ? '#D4A03A' : '#EF4444'} strokeWidth="4"
+                        strokeDasharray={`${avgScore * 2.26} 226`} strokeLinecap="round" />
+                    </svg>
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={runDiscovery}
+                  disabled={discoveryLoading}
+                  className="px-5 py-2.5 bg-sprout-gold text-white font-medium rounded-lg hover:bg-sprout-terracotta transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {discoveryLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Running Discovery...
+                    </>
+                  ) : (
+                    'Run Discovery'
+                  )}
                 </button>
               )}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* Before/After */}
-      <div className="bg-white rounded-2xl card-shadow p-6">
-        <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Website Transformation</h3>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <p className="text-sm font-medium text-gray-500 mb-2">Current Website</p>
-            <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center">
-              <div className="text-center">
-                <Globe className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">No website detected</p>
+          {/* Loading state */}
+          {discoveryLoading && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-10 h-10 text-sprout-gold animate-spin mb-4" />
+              <p className="text-sm text-gray-500">Searching USDA directories, enriching with Google Places, auditing websites...</p>
+              <p className="text-xs text-gray-400 mt-1">This may take 30-60 seconds</p>
+            </div>
+          )}
+
+          {/* Error state */}
+          {discoveryError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+              <XCircle className="w-5 h-5 text-red-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-red-700">Discovery failed</p>
+                <p className="text-xs text-red-600 mt-1">{discoveryError}</p>
               </div>
+              <button onClick={runDiscovery} className="ml-auto text-sm text-red-600 hover:text-red-800 font-medium">Retry</button>
+            </div>
+          )}
+        </div>
+
+        {/* Competitor Table */}
+        {discoveryRan && discoveryResults.length > 0 && (
+          <div className="bg-white rounded-2xl card-shadow p-6">
+            <h3 className="font-display font-bold text-lg text-sprout-green mb-4">
+              Audited Competitors ({discoveryResults.length})
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Farm</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Website</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Score</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {discoveryResults.map((comp, i) => (
+                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-3 px-4 text-sm font-medium text-gray-700">{comp.farm_name}</td>
+                      <td className="py-3 px-4 text-sm">
+                        {comp.website_url ? (
+                          <a href={comp.website_url} target="_blank" rel="noopener noreferrer" className="text-sprout-gold hover:underline flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            Visit
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">None</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`font-display font-bold text-lg ${getScoreColor(comp.digital_health_score ?? 0)}`}>
+                          {comp.digital_health_score ?? '—'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate">{comp.audit_notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500 mb-2">Sprout Generated</p>
-            <div className="aspect-video bg-sprout-sage/10 rounded-xl flex items-center justify-center border-2 border-dashed border-sprout-sage/30">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-sprout-gold rounded-lg flex items-center justify-center mx-auto mb-2">
-                  <Star className="w-6 h-6 text-white" />
+        )}
+
+        {/* No results */}
+        {discoveryRan && discoveryResults.length === 0 && !discoveryLoading && (
+          <div className="bg-white rounded-2xl card-shadow p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+            <h3 className="font-display font-bold text-lg text-sprout-green mb-2">No Competitors Found</h3>
+            <p className="text-sm text-gray-500 max-w-md mx-auto">
+              No farms or markets were found in this area. Try a different zip code or expand your search.
+            </p>
+          </div>
+        )}
+
+        {/* Market Gap Report */}
+        {marketGapReport && (
+          <div className="bg-white rounded-2xl card-shadow p-6">
+            <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Market Gap Analysis</h3>
+            <div className="space-y-3">
+              {marketGapReport.gaps ? (
+                (marketGapReport.gaps as string[]).map((gap: string, i: number) => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5" />
+                    <p className="text-sm text-gray-700">{gap}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <pre className="text-sm text-gray-700 whitespace-pre-wrap">{JSON.stringify(marketGapReport, null, 2)}</pre>
                 </div>
-                <p className="text-sm text-sprout-green font-medium">Preview Available</p>
-                <button className="mt-2 text-xs text-sprout-gold hover:text-sprout-terracotta">
-                  View Generated Site →
-                </button>
-              </div>
+              )}
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
+        )}
 
-  const renderWebsiteSection = () => (
-    <div className="space-y-6">
-      {/* Generated Website Preview */}
-      <div className="bg-white rounded-2xl card-shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="font-display font-bold text-xl text-sprout-green">Your Generated Website</h2>
-            <p className="text-sm text-gray-500">Preview of your auto-built farm landing page</p>
-          </div>
-          <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-              <Download className="w-4 h-4" />
-              Download
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-sprout-gold text-white rounded-lg text-sm font-medium hover:bg-sprout-terracotta transition-colors">
-              <ExternalLink className="w-4 h-4" />
-              View Live
-            </button>
-          </div>
-        </div>
-        
-        <div className="aspect-video bg-gradient-to-br from-sprout-sage/10 to-sprout-gold/10 rounded-xl border border-sprout-sage/20 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-20 h-20 bg-white rounded-2xl card-shadow flex items-center justify-center mx-auto mb-4">
-              <div className="w-12 h-12 bg-sprout-green rounded-xl flex items-center justify-center">
-                <Star className="w-6 h-6 text-sprout-gold" />
-              </div>
-            </div>
-            <p className="text-lg font-display font-bold text-sprout-green">Sunset Valley Organics</p>
-            <p className="text-sm text-gray-500">Family-grown produce since 1987</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Marketing Persona */}
-      <div className="bg-white rounded-2xl card-shadow p-6">
-        <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Marketing Persona</h3>
-        
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="p-4 bg-sprout-gold/5 rounded-xl">
-              <p className="text-xs font-medium text-sprout-gold uppercase tracking-wide mb-2">Farm Story</p>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                A third-generation family farm specializing in organic vegetables and sustainable farming practices. 
-                Known for heirloom tomatoes and community-supported agriculture programs.
-              </p>
-            </div>
-            
-            <div className="p-4 bg-sprout-sage/5 rounded-xl">
-              <p className="text-xs font-medium text-sprout-sage uppercase tracking-wide mb-2">Suggested Tagline</p>
-              <p className="text-sm font-display font-bold text-sprout-green">
-                "Family-grown produce since 1987"
-              </p>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Target Audience</p>
+        {/* SEO Keywords */}
+        {seoReport && (
+          <div className="bg-white rounded-2xl card-shadow p-6">
+            <h3 className="font-display font-bold text-lg text-sprout-green mb-4">SEO Keyword Recommendations</h3>
+            {seoReport.keywords ? (
               <div className="flex flex-wrap gap-2">
-                {['Local Families', 'Farm-to-Table Restaurants', 'CSA Subscribers', 'Farmers Market Shoppers'].map(tag => (
-                  <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                    {tag}
+                {(seoReport.keywords as string[]).map((kw: string, i: number) => (
+                  <span key={i} className="px-3 py-1.5 bg-sprout-gold/10 text-sprout-gold text-sm font-medium rounded-full">
+                    {kw}
                   </span>
                 ))}
               </div>
-            </div>
-            
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap">{JSON.stringify(seoReport, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Re-run button after initial run */}
+        {discoveryRan && !discoveryLoading && (
+          <div className="text-center">
+            <button
+              onClick={runDiscovery}
+              className="px-5 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Re-run Discovery
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderWebsiteSection = () => {
+    const persona = builderResult?.data?.brand_persona;
+    const websiteCode = builderResult?.data?.website_layout;
+    const domains = builderResult?.data?.suggested_domains || [];
+
+    // Split target_audience string into tag pills
+    const audienceTags = persona?.target_audience
+      ? persona.target_audience.split(/,\s*/).map(t => t.trim()).filter(Boolean)
+      : [];
+
+    return (
+      <div className="space-y-6">
+        {/* Generate / Preview Section */}
+        <div className="bg-white rounded-2xl card-shadow p-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Tone & Voice</p>
-              <p className="text-sm text-gray-700">Warm, family-oriented, emphasize heritage and sustainability</p>
+              <h2 className="font-display font-bold text-xl text-sprout-green">Your Generated Website</h2>
+              <p className="text-sm text-gray-500">
+                {builderResult ? 'Preview of your auto-built farm landing page' : 'Generate a custom landing page for your farm'}
+              </p>
             </div>
-            
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Recommended Channels</p>
-              <div className="flex gap-3">
-                <div className="flex items-center gap-1 text-sm text-gray-700">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  Facebook
+            <div className="flex gap-2">
+              {websiteCode && (
+                <>
+                  <button
+                    onClick={() => setShowCode(!showCode)}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    {showCode ? <Eye className="w-4 h-4" /> : <Code2 className="w-4 h-4" />}
+                    {showCode ? 'Preview' : 'View Code'}
+                  </button>
+                  <button
+                    onClick={() => handleCopyCode(websiteCode)}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {codeCopied ? 'Copied!' : 'Copy Code'}
+                  </button>
+                </>
+              )}
+              <button
+                onClick={handleGenerateWebsite}
+                disabled={builderLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-sprout-gold text-white rounded-lg text-sm font-medium hover:bg-sprout-terracotta transition-colors disabled:opacity-50"
+              >
+                {builderLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : builderResult ? (
+                  <RefreshCw className="w-4 h-4" />
+                ) : (
+                  <Globe className="w-4 h-4" />
+                )}
+                {builderLoading ? 'Generating...' : builderResult ? 'Regenerate' : 'Generate Website'}
+              </button>
+            </div>
+          </div>
+
+          {/* Loading State */}
+          {builderLoading && (
+            <div className="aspect-video bg-gradient-to-br from-sprout-sage/10 to-sprout-gold/10 rounded-xl border border-sprout-sage/20 flex items-center justify-center">
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 text-sprout-gold animate-spin mx-auto mb-4" />
+                <p className="text-lg font-display font-bold text-sprout-green">Building Your Website</p>
+                <p className="text-sm text-gray-500 mt-1">Generating brand persona, checking domains, and crafting your landing page...</p>
+                <p className="text-xs text-gray-400 mt-2">This may take 15-30 seconds</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {builderError && !builderLoading && (
+            <div className="aspect-video bg-red-50 rounded-xl border border-red-200 flex items-center justify-center">
+              <div className="text-center">
+                <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                <p className="text-lg font-display font-bold text-sprout-green">Generation Failed</p>
+                <p className="text-sm text-gray-500 mt-1 max-w-md">{builderError}</p>
+                <button
+                  onClick={handleGenerateWebsite}
+                  className="mt-4 px-4 py-2 bg-sprout-gold text-white text-sm font-medium rounded-lg hover:bg-sprout-terracotta transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!builderResult && !builderLoading && !builderError && (
+            <div className="aspect-video bg-gradient-to-br from-sprout-sage/10 to-sprout-gold/10 rounded-xl border-2 border-dashed border-sprout-sage/30 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-white rounded-2xl card-shadow flex items-center justify-center mx-auto mb-4">
+                  <div className="w-12 h-12 bg-sprout-green rounded-xl flex items-center justify-center">
+                    <Globe className="w-6 h-6 text-sprout-gold" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-sm text-gray-700">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  Instagram
+                <p className="text-lg font-display font-bold text-sprout-green">No Website Generated Yet</p>
+                <p className="text-sm text-gray-500 mt-1">Click "Generate Website" to create a custom landing page</p>
+              </div>
+            </div>
+          )}
+
+          {/* Live Preview / Code View */}
+          {websiteCode && !builderLoading && (
+            showCode ? (
+              <div className="relative">
+                <pre className="bg-gray-900 text-gray-100 rounded-xl p-4 overflow-auto max-h-[500px] text-sm font-mono">
+                  <code>{websiteCode}</code>
+                </pre>
+              </div>
+            ) : (
+              <iframe
+                srcDoc={websiteCode}
+                className="w-full aspect-video rounded-xl border border-gray-200"
+                title="Farm Website Preview"
+                sandbox="allow-scripts"
+              />
+            )
+          )}
+        </div>
+
+        {/* Suggested Domains */}
+        {domains.length > 0 && (
+          <div className="bg-white rounded-2xl card-shadow p-6">
+            <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Suggested Domains</h3>
+            <div className="flex flex-wrap gap-3">
+              {domains.map(domain => (
+                <div key={domain} className="flex items-center gap-2 px-4 py-2 bg-sprout-gold/5 border border-sprout-gold/20 rounded-lg">
+                  <Globe className="w-4 h-4 text-sprout-gold" />
+                  <span className="text-sm font-medium text-sprout-green">{domain}</span>
+                  <ExternalLink className="w-3 h-3 text-gray-400" />
                 </div>
-                <div className="flex items-center gap-1 text-sm text-gray-700">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  Google Business
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Marketing Persona */}
+        <div className="bg-white rounded-2xl card-shadow p-6">
+          <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Marketing Persona</h3>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="p-4 bg-sprout-gold/5 rounded-xl">
+                <p className="text-xs font-medium text-sprout-gold uppercase tracking-wide mb-2">Farm Story</p>
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {persona?.farm_story_summary || 'Generate a website to see your AI-crafted farm story.'}
+                </p>
+              </div>
+
+              <div className="p-4 bg-sprout-sage/5 rounded-xl">
+                <p className="text-xs font-medium text-sprout-sage uppercase tracking-wide mb-2">Suggested Tagline</p>
+                <p className="text-sm font-display font-bold text-sprout-green">
+                  {persona ? `"${persona.tagline}"` : '—'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Target Audience</p>
+                <div className="flex flex-wrap gap-2">
+                  {audienceTags.length > 0 ? (
+                    audienceTags.map(tag => (
+                      <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-400">—</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Tone & Voice</p>
+                <p className="text-sm text-gray-700">{persona?.tone_and_voice || '—'}</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Recommended Channels</p>
+                <div className="flex flex-wrap gap-3">
+                  {persona?.recommended_channels && persona.recommended_channels.length > 0 ? (
+                    persona.recommended_channels.map(channel => (
+                      <div key={channel} className="flex items-center gap-1 text-sm text-gray-700">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        {channel}
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-400">—</span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderMarketSection = () => {
     if (marketLoading) {
@@ -367,10 +610,10 @@ export default function DashboardPage() {
     // Build chart data: show predicted price with confidence interval
     const chartData = prediction
       ? [
-          { label: 'Low', price: prediction.pi_low, forecast: null },
-          { label: 'Predicted', price: prediction.predicted_price, forecast: prediction.predicted_price },
-          { label: 'High', price: prediction.pi_high, forecast: null },
-        ]
+        { label: 'Low', price: prediction.pi_low, forecast: null },
+        { label: 'Predicted', price: prediction.predicted_price, forecast: prediction.predicted_price },
+        { label: 'High', price: prediction.pi_high, forecast: null },
+      ]
       : [];
 
     return (
@@ -417,8 +660,8 @@ export default function DashboardPage() {
                   <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#D4A03A" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#D4A03A" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#D4A03A" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#D4A03A" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -529,11 +772,10 @@ export default function DashboardPage() {
                       <td className="py-3 px-4 text-sm text-gray-600">{item.quantity} {item.unit}</td>
                       <td className="py-3 px-4 text-sm text-gray-500">{formatRelativeTime(item.last_updated)}</td>
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          item.quantity > 0
+                        <span className={`px-2 py-1 text-xs rounded-full ${item.quantity > 0
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-red-100 text-red-700'
-                        }`}>
+                          }`}>
                           {item.quantity > 0 ? 'In Stock' : 'Out of Stock'}
                         </span>
                       </td>
@@ -575,7 +817,7 @@ export default function DashboardPage() {
       {/* Restaurant Matches */}
       <div className="bg-white rounded-2xl card-shadow p-6">
         <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Matched Restaurants</h3>
-        
+
         <div className="space-y-4">
           {restaurantMatches.map((restaurant) => (
             <div key={restaurant.id} className="border border-gray-100 rounded-xl p-4 hover:border-sprout-gold/30 transition-colors">
@@ -588,7 +830,7 @@ export default function DashboardPage() {
                     </span>
                     <span className="text-xs text-gray-500">{restaurant.distance}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 mb-3">
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 text-sprout-gold fill-sprout-gold" />
@@ -604,10 +846,10 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   {restaurant.status === 'draft' && (
-                    <button 
+                    <button
                       onClick={() => setSelectedEmail(restaurant.id)}
                       className="px-4 py-2 bg-sprout-gold text-white text-sm font-medium rounded-lg hover:bg-sprout-terracotta transition-colors"
                     >
@@ -628,13 +870,13 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-              
+
               {/* Email Preview Modal */}
               {selectedEmail === restaurant.id && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-medium text-gray-700">Draft Email Preview</p>
-                    <button 
+                    <button
                       onClick={() => setSelectedEmail(null)}
                       className="text-gray-400 hover:text-gray-600"
                     >
@@ -644,15 +886,15 @@ export default function DashboardPage() {
                   <div className="bg-white rounded-lg p-4 text-sm text-gray-600 mb-3">
                     <p className="mb-2">Hi there,</p>
                     <p className="mb-2">
-                      I'm reaching out from Sunset Valley Organics, a local organic farm just {restaurant.distance} from you. 
-                      I noticed {restaurant.name} features {restaurant.menuMatches[0]} on your menu, and I wanted to introduce 
+                      I'm reaching out from Sunset Valley Organics, a local organic farm just {restaurant.distance} from you.
+                      I noticed {restaurant.name} features {restaurant.menuMatches[0]} on your menu, and I wanted to introduce
                       ourselves as a potential supplier.
                     </p>
                     <p className="mb-2">
-                      We currently have fresh {restaurant.menuMatches.join(' and ')} available for delivery. 
+                      We currently have fresh {restaurant.menuMatches.join(' and ')} available for delivery.
                       Would you be interested in a sample drop-off this week?
                     </p>
-                    <p>Best regards,<br/>Sunset Valley Organics</p>
+                    <p>Best regards,<br />Sunset Valley Organics</p>
                   </div>
                   <div className="flex gap-2">
                     <button className="flex-1 px-4 py-2 bg-sprout-gold text-white text-sm font-medium rounded-lg hover:bg-sprout-terracotta transition-colors flex items-center justify-center gap-2">
@@ -677,9 +919,8 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           {['Drafted', 'Sent', 'Opened', 'Replied', 'Converted'].map((stage, i) => (
             <div key={stage} className="flex items-center">
-              <div className={`w-24 py-2 px-3 rounded-lg text-center text-sm font-medium ${
-                i <= 2 ? 'bg-sprout-gold text-white' : 'bg-gray-100 text-gray-500'
-              }`}>
+              <div className={`w-24 py-2 px-3 rounded-lg text-center text-sm font-medium ${i <= 2 ? 'bg-sprout-gold text-white' : 'bg-gray-100 text-gray-500'
+                }`}>
                 {stage}
               </div>
               {i < 4 && <ChevronRight className="w-4 h-4 text-gray-300 mx-1" />}
@@ -738,16 +979,15 @@ export default function DashboardPage() {
             <span>Call (555) 123-FARM to log by voice</span>
           </div>
         </div>
-        
+
         <div className="space-y-4">
           {callLogs.map((call) => (
             <div key={call.id} className="border border-gray-100 rounded-xl p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    call.type === 'inventory' ? 'bg-sprout-gold/10' :
-                    call.type === 'harvest' ? 'bg-sprout-sage/10' : 'bg-gray-100'
-                  }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${call.type === 'inventory' ? 'bg-sprout-gold/10' :
+                      call.type === 'harvest' ? 'bg-sprout-sage/10' : 'bg-gray-100'
+                    }`}>
                     {call.type === 'inventory' && <CheckCheck className="w-5 h-5 text-sprout-gold" />}
                     {call.type === 'harvest' && <TrendingUp className="w-5 h-5 text-sprout-sage" />}
                     {call.type === 'update' && <Edit3 className="w-5 h-5 text-gray-500" />}
@@ -764,11 +1004,11 @@ export default function DashboardPage() {
                   Play Audio
                 </button>
               </div>
-              
+
               <div className="bg-gray-50 rounded-lg p-3 mb-3">
                 <p className="text-sm text-gray-600 italic">"{call.transcript}"</p>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">Extracted:</span>
                 {call.type === 'inventory' && (
@@ -837,9 +1077,19 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className={`px-4 py-2 rounded-lg ${getScoreBg(67)} text-white font-bold`}>
-                Score: 67
-              </div>
+              {discoveryRan && discoveryResults.filter(c => c.digital_health_score != null).length > 0 ? (() => {
+                const scored = discoveryResults.filter(c => c.digital_health_score != null);
+                const avg = Math.round(scored.reduce((s, c) => s + (c.digital_health_score ?? 0), 0) / scored.length);
+                return (
+                  <div className={`px-4 py-2 rounded-lg ${getScoreBg(avg)} text-white font-bold`}>
+                    Benchmark: {avg}
+                  </div>
+                );
+              })() : (
+                <div className={`px-4 py-2 rounded-lg bg-gray-400 text-white font-bold`}>
+                  No Score
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -853,11 +1103,10 @@ export default function DashboardPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.id 
-                    ? 'border-sprout-gold text-sprout-gold' 
+                className={`flex items-center gap-2 px-5 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                    ? 'border-sprout-gold text-sprout-gold'
                     : 'border-transparent text-gray-500 hover:text-sprout-green'
-                }`}
+                  }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
