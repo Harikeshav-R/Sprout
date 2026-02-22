@@ -3,14 +3,16 @@ import {
   LayoutDashboard, TrendingUp, Utensils, Mic, Globe,
   ChevronRight, ArrowUpRight, ArrowDownRight, Star,
   CheckCircle2, AlertCircle, XCircle, ExternalLink,
-  Download, Send, Phone, Clock, Calendar,
-  Users, MessageSquare, Edit3, CheckCheck, Loader2
+  Send, Phone, Clock, Calendar,
+  Users, MessageSquare, Edit3, CheckCheck, Loader2,
+  RefreshCw, Copy, Code2, Eye
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { fetchPredictivePricing, fetchInventory } from '../lib/api';
+import { fetchPredictivePricing, fetchInventory, buildFarmWebsite } from '../lib/api';
+import type { BuilderResponse } from '../lib/api';
 import type { PricePrediction, InventoryItem } from '../types/analytics';
 
 const callLogs = [
@@ -89,6 +91,11 @@ export default function DashboardPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [marketLoading, setMarketLoading] = useState(false);
   const [marketError, setMarketError] = useState<string | null>(null);
+  const [builderResult, setBuilderResult] = useState<BuilderResponse | null>(null);
+  const [builderLoading, setBuilderLoading] = useState(false);
+  const [builderError, setBuilderError] = useState<string | null>(null);
+  const [showCode, setShowCode] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   // Fetch market data when market tab is active
   useEffect(() => {
@@ -116,6 +123,50 @@ export default function DashboardPage() {
       html.style.scrollBehavior = previousBehavior;
     };
   }, []);
+
+  const handleGenerateWebsite = async () => {
+    setBuilderLoading(true);
+    setBuilderError(null);
+    try {
+      const farmId = '00000000-0000-0000-0000-000000000000'; // TODO: Replace with actual farm ID from auth context
+      const result = await buildFarmWebsite(
+        farmId,
+        'Sunset Valley Organics',
+        'Third-generation family farm specializing in organic vegetables and sustainable farming practices. Known for heirloom tomatoes and community-supported agriculture programs.',
+        'Tomatoes, Zucchini, Bell Peppers, Cucumbers, Fresh Herbs'
+      );
+      setBuilderResult(result);
+    } catch (e: any) {
+      setBuilderError(e.message || 'Failed to generate website');
+    } finally {
+      setBuilderLoading(false);
+    }
+  };
+
+  const getPreviewHtml = (code: string) => `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    ${code}
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(FarmLandingPage));
+  </script>
+</body>
+</html>`;
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
 
   const renderAuditSection = () => (
     <div className="space-y-6">
@@ -225,101 +276,205 @@ export default function DashboardPage() {
     </div>
   );
 
-  const renderWebsiteSection = () => (
-    <div className="space-y-6">
-      {/* Generated Website Preview */}
-      <div className="bg-white rounded-2xl card-shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="font-display font-bold text-xl text-sprout-green">Your Generated Website</h2>
-            <p className="text-sm text-gray-500">Preview of your auto-built farm landing page</p>
-          </div>
-          <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-              <Download className="w-4 h-4" />
-              Download
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-sprout-gold text-white rounded-lg text-sm font-medium hover:bg-sprout-terracotta transition-colors">
-              <ExternalLink className="w-4 h-4" />
-              View Live
-            </button>
-          </div>
-        </div>
-        
-        <div className="aspect-video bg-gradient-to-br from-sprout-sage/10 to-sprout-gold/10 rounded-xl border border-sprout-sage/20 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-20 h-20 bg-white rounded-2xl card-shadow flex items-center justify-center mx-auto mb-4">
-              <div className="w-12 h-12 bg-sprout-green rounded-xl flex items-center justify-center">
-                <Star className="w-6 h-6 text-sprout-gold" />
-              </div>
-            </div>
-            <p className="text-lg font-display font-bold text-sprout-green">Sunset Valley Organics</p>
-            <p className="text-sm text-gray-500">Family-grown produce since 1987</p>
-          </div>
-        </div>
-      </div>
+  const renderWebsiteSection = () => {
+    const persona = builderResult?.data?.brand_persona;
+    const websiteCode = builderResult?.data?.website_layout;
+    const domains = builderResult?.data?.suggested_domains || [];
 
-      {/* Marketing Persona */}
-      <div className="bg-white rounded-2xl card-shadow p-6">
-        <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Marketing Persona</h3>
-        
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="p-4 bg-sprout-gold/5 rounded-xl">
-              <p className="text-xs font-medium text-sprout-gold uppercase tracking-wide mb-2">Farm Story</p>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                A third-generation family farm specializing in organic vegetables and sustainable farming practices. 
-                Known for heirloom tomatoes and community-supported agriculture programs.
+    // Split target_audience string into tag pills
+    const audienceTags = persona?.target_audience
+      ? persona.target_audience.split(/,\s*/).map(t => t.trim()).filter(Boolean)
+      : [];
+
+    return (
+      <div className="space-y-6">
+        {/* Generate / Preview Section */}
+        <div className="bg-white rounded-2xl card-shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-display font-bold text-xl text-sprout-green">Your Generated Website</h2>
+              <p className="text-sm text-gray-500">
+                {builderResult ? 'Preview of your auto-built farm landing page' : 'Generate a custom landing page for your farm'}
               </p>
             </div>
-            
-            <div className="p-4 bg-sprout-sage/5 rounded-xl">
-              <p className="text-xs font-medium text-sprout-sage uppercase tracking-wide mb-2">Suggested Tagline</p>
-              <p className="text-sm font-display font-bold text-sprout-green">
-                "Family-grown produce since 1987"
-              </p>
+            <div className="flex gap-2">
+              {websiteCode && (
+                <>
+                  <button
+                    onClick={() => setShowCode(!showCode)}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    {showCode ? <Eye className="w-4 h-4" /> : <Code2 className="w-4 h-4" />}
+                    {showCode ? 'Preview' : 'View Code'}
+                  </button>
+                  <button
+                    onClick={() => handleCopyCode(websiteCode)}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {codeCopied ? 'Copied!' : 'Copy Code'}
+                  </button>
+                </>
+              )}
+              <button
+                onClick={handleGenerateWebsite}
+                disabled={builderLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-sprout-gold text-white rounded-lg text-sm font-medium hover:bg-sprout-terracotta transition-colors disabled:opacity-50"
+              >
+                {builderLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : builderResult ? (
+                  <RefreshCw className="w-4 h-4" />
+                ) : (
+                  <Globe className="w-4 h-4" />
+                )}
+                {builderLoading ? 'Generating...' : builderResult ? 'Regenerate' : 'Generate Website'}
+              </button>
             </div>
           </div>
-          
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Target Audience</p>
-              <div className="flex flex-wrap gap-2">
-                {['Local Families', 'Farm-to-Table Restaurants', 'CSA Subscribers', 'Farmers Market Shoppers'].map(tag => (
-                  <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                    {tag}
-                  </span>
-                ))}
+
+          {/* Loading State */}
+          {builderLoading && (
+            <div className="aspect-video bg-gradient-to-br from-sprout-sage/10 to-sprout-gold/10 rounded-xl border border-sprout-sage/20 flex items-center justify-center">
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 text-sprout-gold animate-spin mx-auto mb-4" />
+                <p className="text-lg font-display font-bold text-sprout-green">Building Your Website</p>
+                <p className="text-sm text-gray-500 mt-1">Generating brand persona, checking domains, and crafting your landing page...</p>
+                <p className="text-xs text-gray-400 mt-2">This may take 15-30 seconds</p>
               </div>
             </div>
-            
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Tone & Voice</p>
-              <p className="text-sm text-gray-700">Warm, family-oriented, emphasize heritage and sustainability</p>
+          )}
+
+          {/* Error State */}
+          {builderError && !builderLoading && (
+            <div className="aspect-video bg-red-50 rounded-xl border border-red-200 flex items-center justify-center">
+              <div className="text-center">
+                <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                <p className="text-lg font-display font-bold text-sprout-green">Generation Failed</p>
+                <p className="text-sm text-gray-500 mt-1 max-w-md">{builderError}</p>
+                <button
+                  onClick={handleGenerateWebsite}
+                  className="mt-4 px-4 py-2 bg-sprout-gold text-white text-sm font-medium rounded-lg hover:bg-sprout-terracotta transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
             </div>
-            
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Recommended Channels</p>
-              <div className="flex gap-3">
-                <div className="flex items-center gap-1 text-sm text-gray-700">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  Facebook
+          )}
+
+          {/* Empty State */}
+          {!builderResult && !builderLoading && !builderError && (
+            <div className="aspect-video bg-gradient-to-br from-sprout-sage/10 to-sprout-gold/10 rounded-xl border-2 border-dashed border-sprout-sage/30 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-white rounded-2xl card-shadow flex items-center justify-center mx-auto mb-4">
+                  <div className="w-12 h-12 bg-sprout-green rounded-xl flex items-center justify-center">
+                    <Globe className="w-6 h-6 text-sprout-gold" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-sm text-gray-700">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  Instagram
+                <p className="text-lg font-display font-bold text-sprout-green">No Website Generated Yet</p>
+                <p className="text-sm text-gray-500 mt-1">Click "Generate Website" to create a custom landing page</p>
+              </div>
+            </div>
+          )}
+
+          {/* Live Preview / Code View */}
+          {websiteCode && !builderLoading && (
+            showCode ? (
+              <div className="relative">
+                <pre className="bg-gray-900 text-gray-100 rounded-xl p-4 overflow-auto max-h-[500px] text-sm font-mono">
+                  <code>{websiteCode}</code>
+                </pre>
+              </div>
+            ) : (
+              <iframe
+                srcDoc={getPreviewHtml(websiteCode)}
+                className="w-full aspect-video rounded-xl border border-gray-200"
+                title="Farm Website Preview"
+                sandbox="allow-scripts"
+              />
+            )
+          )}
+        </div>
+
+        {/* Suggested Domains */}
+        {domains.length > 0 && (
+          <div className="bg-white rounded-2xl card-shadow p-6">
+            <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Suggested Domains</h3>
+            <div className="flex flex-wrap gap-3">
+              {domains.map(domain => (
+                <div key={domain} className="flex items-center gap-2 px-4 py-2 bg-sprout-gold/5 border border-sprout-gold/20 rounded-lg">
+                  <Globe className="w-4 h-4 text-sprout-gold" />
+                  <span className="text-sm font-medium text-sprout-green">{domain}</span>
+                  <ExternalLink className="w-3 h-3 text-gray-400" />
                 </div>
-                <div className="flex items-center gap-1 text-sm text-gray-700">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  Google Business
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Marketing Persona */}
+        <div className="bg-white rounded-2xl card-shadow p-6">
+          <h3 className="font-display font-bold text-lg text-sprout-green mb-4">Marketing Persona</h3>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="p-4 bg-sprout-gold/5 rounded-xl">
+                <p className="text-xs font-medium text-sprout-gold uppercase tracking-wide mb-2">Farm Story</p>
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {persona?.farm_story_summary || 'Generate a website to see your AI-crafted farm story.'}
+                </p>
+              </div>
+
+              <div className="p-4 bg-sprout-sage/5 rounded-xl">
+                <p className="text-xs font-medium text-sprout-sage uppercase tracking-wide mb-2">Suggested Tagline</p>
+                <p className="text-sm font-display font-bold text-sprout-green">
+                  {persona ? `"${persona.tagline}"` : '—'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Target Audience</p>
+                <div className="flex flex-wrap gap-2">
+                  {audienceTags.length > 0 ? (
+                    audienceTags.map(tag => (
+                      <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-400">—</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Tone & Voice</p>
+                <p className="text-sm text-gray-700">{persona?.tone_and_voice || '—'}</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Recommended Channels</p>
+                <div className="flex flex-wrap gap-3">
+                  {persona?.recommended_channels && persona.recommended_channels.length > 0 ? (
+                    persona.recommended_channels.map(channel => (
+                      <div key={channel} className="flex items-center gap-1 text-sm text-gray-700">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        {channel}
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-400">—</span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderMarketSection = () => {
     if (marketLoading) {
