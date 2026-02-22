@@ -153,11 +153,6 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const renderAuditSection = () => {
-    const scoredCompetitors = discoveryResults.filter((c) => c.digital_health_score != null);
-    const avgScore = scoredCompetitors.length
-      ? Math.round(scoredCompetitors.reduce((sum, c) => sum + (c.digital_health_score ?? 0), 0) / scoredCompetitors.length)
-      : 0;
   const handleGenerateWebsite = async () => {
     setBuilderLoading(true);
     setBuilderError(null);
@@ -177,31 +172,17 @@ export default function DashboardPage() {
     }
   };
 
-  const getPreviewHtml = (code: string) => `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel">
-    ${code}
-    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(FarmLandingPage));
-  </script>
-</body>
-</html>`;
-
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
   };
 
+  const renderAuditSection = () => {
+    const scoredCompetitors = discoveryResults.filter((c) => c.digital_health_score != null);
+    const avgScore = scoredCompetitors.length
+      ? Math.round(scoredCompetitors.reduce((sum, c) => sum + (c.digital_health_score ?? 0), 0) / scoredCompetitors.length)
+      : 0;
 
     return (
       <div className="space-y-6">
@@ -494,7 +475,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <iframe
-                srcDoc={getPreviewHtml(websiteCode)}
+                srcDoc={websiteCode}
                 className="w-full aspect-video rounded-xl border border-gray-200"
                 title="Farm Website Preview"
                 sandbox="allow-scripts"
