@@ -25,8 +25,14 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+    env_file:
+      - ./backend/.env
     environment:
-      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/sprout
+      - POSTGRES_DB=sprout
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_SERVER=db
+      - POSTGRES_PORT=5432
     depends_on:
       db:
         condition: service_healthy
