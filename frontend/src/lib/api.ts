@@ -100,3 +100,24 @@ export async function buildFarmWebsite(
   }
   return res.json();
 }
+
+// --- Geo Resolution ---
+
+export interface ResolvedLocation {
+  zip_code: string;
+  city: string;
+  state: string;
+  state_abbrev: string;
+  county: string;
+}
+
+export async function resolveZipCode(zipCode: string): Promise<ResolvedLocation> {
+  const res = await fetch(
+    `${API_BASE}/api/v1/geo/resolve-zip?zip_code=${encodeURIComponent(zipCode)}`
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `${res.status}`);
+  }
+  return res.json();
+}

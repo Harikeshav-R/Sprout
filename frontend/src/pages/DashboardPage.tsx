@@ -14,6 +14,7 @@ import {
 import { fetchPredictivePricing, fetchInventory, fetchDiscovery, buildFarmWebsite } from '../lib/api';
 import type { CompetitorFarm, DiscoveryResponse, BuilderResponse } from '../lib/api';
 import type { PricePrediction, InventoryItem } from '../types/analytics';
+import { useFarmProfile } from '../context/FarmContext';
 
 const callLogs = [
   { id: 1, date: 'Today, 9:45 AM', duration: '2:34', transcript: 'Added 200 pounds of Roma tomatoes to inventory. Also sold 50 pounds to Blue Table Bistro.', type: 'inventory' },
@@ -85,6 +86,7 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export default function DashboardPage() {
+  const { profile } = useFarmProfile();
   const [activeTab, setActiveTab] = useState('audit');
   const [selectedEmail, setSelectedEmail] = useState<number | null>(null);
   const [prediction, setPrediction] = useState<PricePrediction | null>(null);
@@ -110,10 +112,10 @@ export default function DashboardPage() {
     setDiscoveryError(null);
     try {
       const data = await fetchDiscovery({
-        farm_name: 'Sunset Valley Organics',
-        farm_offerings: 'organic produce',
-        zip_code: '97201',
-        state: 'OR',
+        farm_name: profile.farmName || 'My Farm',
+        farm_offerings: profile.farmOfferings || 'organic produce',
+        zip_code: profile.zipCode || '',
+        state: profile.state || '',
       });
       setDiscoveryResults(data.leads);
       setMarketGapReport(data.market_gap_report);
@@ -132,7 +134,7 @@ export default function DashboardPage() {
     setMarketLoading(true);
     setMarketError(null);
     Promise.all([
-      fetchPredictivePricing('Zucchini', 'Multnomah'),
+      fetchPredictivePricing('Zucchini', profile.county || 'Multnomah'),
       fetchInventory('00000000-0000-0000-0000-000000000000'), // TODO: Replace with actual farm ID from auth context
     ])
       .then(([pred, inv]) => {
@@ -160,8 +162,8 @@ export default function DashboardPage() {
       const farmId = '00000000-0000-0000-0000-000000000000'; // TODO: Replace with actual farm ID from auth context
       const result = await buildFarmWebsite(
         farmId,
-        'Sunset Valley Organics',
-        'Third-generation family farm specializing in organic vegetables and sustainable farming practices. Known for heirloom tomatoes and community-supported agriculture programs.',
+        profile.farmName || 'My Farm',
+        `Farm located in ${profile.city || 'the area'}${profile.state ? ', ' + profile.state : ''}. Specializing in organic produce and sustainable farming practices.`,
         'Tomatoes, Zucchini, Bell Peppers, Cucumbers, Fresh Herbs'
       );
       setBuilderResult(result);
@@ -773,8 +775,8 @@ export default function DashboardPage() {
                       <td className="py-3 px-4 text-sm text-gray-500">{formatRelativeTime(item.last_updated)}</td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${item.quantity > 0
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-red-100 text-red-700'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-red-100 text-red-700'
                           }`}>
                           {item.quantity > 0 ? 'In Stock' : 'Out of Stock'}
                         </span>
@@ -886,7 +888,7 @@ export default function DashboardPage() {
                   <div className="bg-white rounded-lg p-4 text-sm text-gray-600 mb-3">
                     <p className="mb-2">Hi there,</p>
                     <p className="mb-2">
-                      I'm reaching out from Sunset Valley Organics, a local organic farm just {restaurant.distance} from you.
+                      I'm reaching out from {profile.farmName || 'our farm'}, a local organic farm just {restaurant.distance} from you.
                       I noticed {restaurant.name} features {restaurant.menuMatches[0]} on your menu, and I wanted to introduce
                       ourselves as a potential supplier.
                     </p>
@@ -894,7 +896,7 @@ export default function DashboardPage() {
                       We currently have fresh {restaurant.menuMatches.join(' and ')} available for delivery.
                       Would you be interested in a sample drop-off this week?
                     </p>
-                    <p>Best regards,<br />Sunset Valley Organics</p>
+                    <p>Best regards,<br />{profile.farmName || 'Our Farm'}</p>
                   </div>
                   <div className="flex gap-2">
                     <button className="flex-1 px-4 py-2 bg-sprout-gold text-white text-sm font-medium rounded-lg hover:bg-sprout-terracotta transition-colors flex items-center justify-center gap-2">
@@ -986,7 +988,7 @@ export default function DashboardPage() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${call.type === 'inventory' ? 'bg-sprout-gold/10' :
-                      call.type === 'harvest' ? 'bg-sprout-sage/10' : 'bg-gray-100'
+                    call.type === 'harvest' ? 'bg-sprout-sage/10' : 'bg-gray-100'
                     }`}>
                     {call.type === 'inventory' && <CheckCheck className="w-5 h-5 text-sprout-gold" />}
                     {call.type === 'harvest' && <TrendingUp className="w-5 h-5 text-sprout-sage" />}
@@ -1072,8 +1074,8 @@ export default function DashboardPage() {
                 <Star className="w-6 h-6 text-sprout-gold" />
               </div>
               <div>
-                <h1 className="font-display font-bold text-xl text-sprout-green">Sunset Valley Organics</h1>
-                <p className="text-sm text-gray-500">Portland, OR • Organic Farm</p>
+                <h1 className="font-display font-bold text-xl text-sprout-green">{profile.farmName || 'Your Farm'}</h1>
+                <p className="text-sm text-gray-500">{profile.city && profile.state ? `${profile.city}, ${profile.state}` : 'Your Location'} • Organic Farm</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -1104,8 +1106,8 @@ export default function DashboardPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-5 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
-                    ? 'border-sprout-gold text-sprout-gold'
-                    : 'border-transparent text-gray-500 hover:text-sprout-green'
+                  ? 'border-sprout-gold text-sprout-gold'
+                  : 'border-transparent text-gray-500 hover:text-sprout-green'
                   }`}
               >
                 <tab.icon className="w-4 h-4" />
