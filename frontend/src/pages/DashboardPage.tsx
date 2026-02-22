@@ -1,34 +1,17 @@
 import { useState, useEffect } from 'react';
-import { 
+import {
   LayoutDashboard, TrendingUp, Utensils, Mic, Globe,
-  ChevronRight, ArrowUpRight, Star,
+  ChevronRight, ArrowUpRight, ArrowDownRight, Star,
   CheckCircle2, AlertCircle, XCircle, ExternalLink,
   Download, Send, Phone, Clock, Calendar,
-  Users, MessageSquare, Edit3, CheckCheck
+  Users, MessageSquare, Edit3, CheckCheck, Loader2
 } from 'lucide-react';
-import { 
-  XAxis, YAxis, CartesianGrid, 
+import {
+  XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-
-// Mock data for charts
-const priceData = [
-  { month: 'Jan', price: 2.40, forecast: null },
-  { month: 'Feb', price: 2.55, forecast: null },
-  { month: 'Mar', price: 2.80, forecast: null },
-  { month: 'Apr', price: 3.10, forecast: null },
-  { month: 'May', price: 3.45, forecast: null },
-  { month: 'Jun', price: 3.20, forecast: 3.85 },
-  { month: 'Jul', price: null, forecast: 4.20 },
-  { month: 'Aug', price: null, forecast: 4.50 },
-];
-
-const inventoryData = [
-  { crop: 'Tomatoes', quantity: 450, unit: 'lbs', lastUpdated: '2 hours ago' },
-  { crop: 'Zucchini', quantity: 320, unit: 'lbs', lastUpdated: '5 hours ago' },
-  { crop: 'Bell Peppers', quantity: 180, unit: 'lbs', lastUpdated: '1 day ago' },
-  { crop: 'Cucumbers', quantity: 275, unit: 'lbs', lastUpdated: '3 hours ago' },
-];
+import { fetchPredictivePricing, fetchInventory } from '../lib/api';
+import type { PricePrediction, InventoryItem } from '../types/analytics';
 
 const callLogs = [
   { id: 1, date: 'Today, 9:45 AM', duration: '2:34', transcript: 'Added 200 pounds of Roma tomatoes to inventory. Also sold 50 pounds to Blue Table Bistro.', type: 'inventory' },
@@ -86,9 +69,43 @@ const getScoreBg = (score: number) => {
   return 'bg-red-500';
 };
 
+function formatRelativeTime(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+}
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('audit');
   const [selectedEmail, setSelectedEmail] = useState<number | null>(null);
+  const [prediction, setPrediction] = useState<PricePrediction | null>(null);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [marketLoading, setMarketLoading] = useState(false);
+  const [marketError, setMarketError] = useState<string | null>(null);
+
+  // Fetch market data when market tab is active
+  useEffect(() => {
+    if (activeTab !== 'market') return;
+    setMarketLoading(true);
+    setMarketError(null);
+    Promise.all([
+      fetchPredictivePricing('Zucchini', 'Multnomah'),
+      fetchInventory('00000000-0000-0000-0000-000000000000'), // TODO: Replace with actual farm ID from auth context
+    ])
+      .then(([pred, inv]) => {
+        setPrediction(pred);
+        setInventory(inv);
+      })
+      .catch((e) => setMarketError(e.message))
+      .finally(() => setMarketLoading(false));
+  }, [activeTab]);
 
   // Disable smooth scrolling on dashboard (no autoscroll)
   useEffect(() => {
@@ -304,139 +321,238 @@ export default function DashboardPage() {
     </div>
   );
 
-  const renderMarketSection = () => (
-    <div className="space-y-6">
-      {/* Price Trends Chart */}
-      <div className="bg-white rounded-2xl card-shadow p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="font-display font-bold text-xl text-sprout-green">Crop Pricing Trends</h2>
-            <p className="text-sm text-gray-500">Organic zucchini prices in your county</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1 text-sm text-emerald-600">
-              <ArrowUpRight className="w-4 h-4" />
-              +12% this month
-            </span>
-          </div>
+  const renderMarketSection = () => {
+    if (marketLoading) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-sprout-gold animate-spin" />
+          <span className="ml-3 text-gray-500">Loading market data...</span>
         </div>
-        
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={priceData}>
-              <defs>
-                <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#D4A03A" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#D4A03A" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
-              <YAxis stroke="#9CA3AF" fontSize={12} domain={[2, 5]} />
-              <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="price" 
-                stroke="#D4A03A" 
-                strokeWidth={2}
-                fillOpacity={1} 
-                fill="url(#colorPrice)" 
-              />
-              <Area 
-                type="monotone" 
-                dataKey="forecast" 
-                stroke="#7A9B76" 
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                fill="none" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        
-        <div className="flex items-center gap-4 mt-4 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-sprout-gold"></span>
-            Historical
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-sprout-sage"></span>
-            Forecast
-          </div>
-        </div>
-      </div>
+      );
+    }
 
-      {/* Demand Forecast Cards */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-emerald-50 rounded-xl p-5 border border-emerald-100">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-white" />
-            </div>
+    if (marketError) {
+      const isNotFound = marketError.includes('404');
+      return (
+        <div className="bg-white rounded-2xl card-shadow p-8 text-center">
+          {isNotFound ? (
+            <>
+              <AlertCircle className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+              <h3 className="font-display font-bold text-lg text-sprout-green mb-2">No Data Yet</h3>
+              <p className="text-sm text-gray-500 max-w-md mx-auto">
+                Not enough historical pricing data for this crop yet. Data will appear automatically as market records accumulate.
+              </p>
+            </>
+          ) : (
+            <>
+              <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+              <h3 className="font-display font-bold text-lg text-sprout-green mb-2">Failed to Load Market Data</h3>
+              <p className="text-sm text-gray-500 max-w-md mx-auto mb-4">{marketError}</p>
+              <button
+                onClick={() => setActiveTab('')}
+                onTransitionEnd={() => setActiveTab('market')}
+                className="px-4 py-2 bg-sprout-gold text-white text-sm font-medium rounded-lg hover:bg-sprout-terracotta transition-colors"
+              >
+                Retry
+              </button>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    const isRising = prediction ? prediction.trend_slope > 0 : true;
+    const trendPercent = prediction ? Math.abs(prediction.trend_slope * 100).toFixed(1) : '0';
+
+    // Build chart data: show predicted price with confidence interval
+    const chartData = prediction
+      ? [
+          { label: 'Low', price: prediction.pi_low, forecast: null },
+          { label: 'Predicted', price: prediction.predicted_price, forecast: prediction.predicted_price },
+          { label: 'High', price: prediction.pi_high, forecast: null },
+        ]
+      : [];
+
+    return (
+      <div className="space-y-6">
+        {/* Price Trends Chart */}
+        <div className="bg-white rounded-2xl card-shadow p-6">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide">High Confidence</p>
-              <p className="text-sm text-gray-700 mt-1">
-                <strong>95% probability</strong> that organic zucchini prices will rise by <strong>12%</strong> in the next 3 weeks based on local scarcity.
+              <h2 className="font-display font-bold text-xl text-sprout-green">Crop Pricing Trends</h2>
+              <p className="text-sm text-gray-500">
+                {prediction ? `${prediction.crop_name} prices in ${prediction.county} County` : 'Organic zucchini prices in your county'}
               </p>
             </div>
+            {prediction && (
+              <div className="flex items-center gap-2">
+                <span className={`flex items-center gap-1 text-sm ${isRising ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {isRising ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                  {isRising ? '+' : '-'}{trendPercent}% trend
+                </span>
+              </div>
+            )}
           </div>
-        </div>
-        
-        <div className="bg-amber-50 rounded-xl p-5 border border-amber-100">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Market Alert</p>
-              <p className="text-sm text-gray-700 mt-1">
-                <strong>3 competitors</strong> in your area are also harvesting tomatoes this week. Consider pricing 5-8% below market average.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Inventory Tracker */}
-      <div className="bg-white rounded-2xl card-shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display font-bold text-lg text-sprout-green">Current Inventory</h3>
-          <button className="text-sm text-sprout-gold hover:text-sprout-terracotta font-medium">
-            + Add Item
-          </button>
+          {prediction ? (
+            <>
+              {/* Price summary cards */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-xl p-4 text-center">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Low (95% PI)</p>
+                  <p className="font-display font-bold text-2xl text-amber-600">${prediction.pi_low.toFixed(2)}</p>
+                </div>
+                <div className="bg-sprout-gold/5 rounded-xl p-4 text-center border border-sprout-gold/20">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Predicted Price</p>
+                  <p className="font-display font-bold text-2xl text-sprout-green">${prediction.predicted_price.toFixed(2)}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4 text-center">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">High (95% PI)</p>
+                  <p className="font-display font-bold text-2xl text-emerald-600">${prediction.pi_high.toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#D4A03A" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#D4A03A" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="label" stroke="#9CA3AF" fontSize={12} />
+                    <YAxis stroke="#9CA3AF" fontSize={12} domain={['auto', 'auto']} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      formatter={(value: number) => [`$${value.toFixed(2)}`, 'Price']}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="price"
+                      stroke="#D4A03A"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorPrice)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="forecast"
+                      stroke="#7A9B76"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      fill="none"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="flex items-center gap-4 mt-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-sprout-gold"></span>
+                  Price Range (95% PI)
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-sprout-sage"></span>
+                  Forecast
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-400">
+              No pricing data available
+            </div>
+          )}
         </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Crop</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Last Updated</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {inventoryData.map((item) => (
-                <tr key={item.crop} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="py-3 px-4 text-sm font-medium text-gray-700">{item.crop}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{item.quantity} {item.unit}</td>
-                  <td className="py-3 px-4 text-sm text-gray-500">{item.lastUpdated}</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">
-                      In Stock
-                    </span>
-                  </td>
+
+        {/* Insight Card */}
+        {prediction && (
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className={`${isRising ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'} rounded-xl p-5 border`}>
+              <div className="flex items-start gap-3">
+                <div className={`w-10 h-10 ${isRising ? 'bg-emerald-500' : 'bg-red-500'} rounded-lg flex items-center justify-center`}>
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className={`text-xs font-medium ${isRising ? 'text-emerald-600' : 'text-red-600'} uppercase tracking-wide`}>
+                    Price {isRising ? 'Rising' : 'Falling'}
+                  </p>
+                  <p className="text-sm text-gray-700 mt-1">
+                    {prediction.plain_language_insight}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 rounded-xl p-5 border border-amber-100">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Prediction Interval</p>
+                  <p className="text-sm text-gray-700 mt-1">
+                    The next projected price for <strong>{prediction.crop_name}</strong> is <strong>${prediction.predicted_price.toFixed(2)}</strong>,
+                    with a 95% prediction interval of <strong>${prediction.pi_low.toFixed(2)}&ndash;${prediction.pi_high.toFixed(2)}</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Inventory Tracker */}
+        <div className="bg-white rounded-2xl card-shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display font-bold text-lg text-sprout-green">Current Inventory</h3>
+            <button className="text-sm text-sprout-gold hover:text-sprout-terracotta font-medium">
+              + Add Item
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Crop</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Last Updated</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {inventory.length > 0 ? (
+                  inventory.map((item) => (
+                    <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-3 px-4 text-sm font-medium text-gray-700">{item.crop_name}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600">{item.quantity} {item.unit}</td>
+                      <td className="py-3 px-4 text-sm text-gray-500">{formatRelativeTime(item.last_updated)}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          item.quantity > 0
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {item.quantity > 0 ? 'In Stock' : 'Out of Stock'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-sm text-gray-400">
+                      No inventory items found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderOutreachSection = () => (
     <div className="space-y-6">
