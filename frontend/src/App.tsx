@@ -8,6 +8,7 @@ import LandingPage from './pages/LandingPage';
 import DiscoveryPage from './pages/DiscoveryPage';
 import DashboardPage from './pages/DashboardPage';
 import OnboardingPage from './pages/OnboardingPage';
+import { FarmProfileProvider } from './context/FarmContext';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -44,9 +45,11 @@ function App() {
 
   return (
     <Router>
-      <div className="relative bg-sprout-cream min-h-screen">
-        <AppContent />
-      </div>
+      <FarmProfileProvider>
+        <div className="relative bg-sprout-cream min-h-screen">
+          <AppContent />
+        </div>
+      </FarmProfileProvider>
     </Router>
   );
 }

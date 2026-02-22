@@ -1,8 +1,9 @@
 from fastapi import APIRouter
 
-from src.api.v1.endpoints import farms, builder, inventory, pricing, transactions, outreach, analytics
+from src.api.v1.endpoints import farms, builder, inventory, pricing, transactions, outreach, analytics, geo
 
 api_router = APIRouter()
+api_router.include_router(geo.router, prefix="/geo", tags=["geo"])
 api_router.include_router(farms.router, prefix="/farms", tags=["farms"])
 api_router.include_router(builder.router, prefix="/builder", tags=["builder"])
 api_router.include_router(inventory.router, prefix="/inventory", tags=["inventory"])

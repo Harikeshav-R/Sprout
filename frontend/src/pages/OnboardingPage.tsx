@@ -4,12 +4,20 @@ import { motion } from 'framer-motion';
 import KineticDotsLoader from '../components/ui/kinetic-dots-loader';
 import { VerticalCutReveal } from '../components/ui/vertical-cut-reveal';
 import { Sprout } from 'lucide-react';
+import { useFarmProfile } from '../context/FarmContext';
+import { resolveZipCode } from '../lib/api';
 
 type OnboardingStep = 'selection' | 'farm-info' | 'scraping';
 
 export default function OnboardingPage() {
     const navigate = useNavigate();
+    const { updateProfile } = useFarmProfile();
     const [step, setStep] = useState<OnboardingStep>('selection');
+
+    // Controlled form state
+    const [farmName, setFarmName] = useState('');
+    const [website, setWebsite] = useState('');
+    const [location, setLocation] = useState('');
 
     const handleSelection = (type: 'shopper' | 'farmer') => {
         if (type === 'shopper') {
@@ -19,11 +27,48 @@ export default function OnboardingPage() {
         }
     };
 
-    const handleFarmSubmit = (e: React.FormEvent) => {
+    const handleFarmSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setStep('scraping');
 
-        // Simulate scraping and AI analysis time
+        // Immediately store what we know
+        updateProfile({ farmName, website });
+
+        // Try to resolve the location input
+        // User may enter a zip code like "43210" or a "City, State" string
+        const trimmed = location.trim();
+        const isZipCode = /^\d{5}(-\d{4})?$/.test(trimmed);
+
+        if (isZipCode) {
+            try {
+                const resolved = await resolveZipCode(trimmed);
+                updateProfile({
+                    zipCode: resolved.zip_code,
+                    city: resolved.city,
+                    state: resolved.state_abbrev,
+                    county: resolved.county,
+                });
+            } catch {
+                // Geocoding failed — use raw input as fallback
+                updateProfile({
+                    zipCode: trimmed,
+                    city: trimmed,
+                    state: '',
+                    county: '',
+                });
+            }
+        } else {
+            // User typed something like "Columbus, OH"
+            const parts = trimmed.split(',').map((s) => s.trim());
+            updateProfile({
+                zipCode: '',
+                city: parts[0] || trimmed,
+                state: parts[1] || '',
+                county: '',
+            });
+        }
+
+        // Navigate after a short delay (scraping animation)
         setTimeout(() => {
             navigate('/dashboard');
         }, 4500);
@@ -104,6 +149,8 @@ export default function OnboardingPage() {
                                 <input
                                     required
                                     type="text"
+                                    value={farmName}
+                                    onChange={(e) => setFarmName(e.target.value)}
                                     placeholder="E.g. Sunny Brook Farm"
                                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-sprout-gold focus:ring-2 focus:ring-sprout-gold/20 outline-none transition-all"
                                 />
@@ -113,6 +160,8 @@ export default function OnboardingPage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Website (Optional)</label>
                                 <input
                                     type="url"
+                                    value={website}
+                                    onChange={(e) => setWebsite(e.target.value)}
                                     placeholder="https://yourfarm.com"
                                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-sprout-gold focus:ring-2 focus:ring-sprout-gold/20 outline-none transition-all"
                                 />
@@ -123,7 +172,9 @@ export default function OnboardingPage() {
                                 <input
                                     required
                                     type="text"
-                                    placeholder="City, State or Zip Code"
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
+                                    placeholder="Zip Code (e.g. 43210) or City, State"
                                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-sprout-gold focus:ring-2 focus:ring-sprout-gold/20 outline-none transition-all"
                                 />
                             </div>
