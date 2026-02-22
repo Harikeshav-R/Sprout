@@ -1,11 +1,11 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class FarmLead(BaseModel):
+class CompetitorFarm(BaseModel):
     """
-    Represents a single farm lead moving through the discovery pipeline.
+    Represents a local competitor farm for benchmarking.
     """
     farm_name: str
     location_state: str
@@ -21,8 +21,10 @@ class DiscoverySearchCriteria(BaseModel):
     """
     Input criteria for the discovery process.
     """
-    zip_code: Optional[str] = None
-    state: Optional[str] = None
+    farm_name: str
+    farm_offerings: str
+    zip_code: str
+    state: str
 
 
 class DiscoveryState(BaseModel):
@@ -30,7 +32,15 @@ class DiscoveryState(BaseModel):
     State definition for the LangGraph Discovery workflow.
     """
     search_criteria: Union[DiscoverySearchCriteria, dict] = Field(default_factory=dict)
-    raw_leads: List[FarmLead] = Field(default_factory=list)
-    enriched_leads: List[FarmLead] = Field(default_factory=list)
-    audited_leads: List[FarmLead] = Field(default_factory=list)
+
+    raw_competitors: List[CompetitorFarm] = Field(default_factory=list)
+    enriched_competitors: List[CompetitorFarm] = Field(default_factory=list)
+    audited_competitors: List[CompetitorFarm] = Field(default_factory=list)
+
+    # Reports
+    market_gap_report: Optional[Dict[str, Any]] = None
+    seo_report: Optional[Dict[str, Any]] = None
+
     errors: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
